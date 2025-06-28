@@ -442,14 +442,14 @@
                     <span>дней</span>
                 </div>
             </div>
-            <button class="refresh-button" onclick="refreshData()" id="refreshBtn">↻</button>
+            <button class="refresh-button" id="refreshBtn">↻</button>
         </div>
 
         <div class="calendar-section">
             <div class="month-navigation">
-                <button class="nav-btn" onclick="changeMonth(-1)">←</button>
+                <button class="nav-btn" id="prevMonthBtn">←</button>
                 <div class="month-title" id="monthTitle">Январь 2024</div>
-                <button class="nav-btn" onclick="changeMonth(1)">→</button>
+                <button class="nav-btn" id="nextMonthBtn">→</button>
             </div>
             <div class="calendar-grid" id="calendar"></div>
         </div>
@@ -463,7 +463,7 @@
             </div>
         </div>
 
-        <button class="fab" onclick="addNewTask()">+</button>
+        <button class="fab" id="addTaskBtn">+</button>
     </div>
 
     <script>
@@ -772,7 +772,7 @@
                 if (isToday) className += ' today';
                 if (isSelected) className += ' selected';
                 
-                html += `<div class="${className}" onclick="selectDate(${year}, ${month}, ${day})">
+                html += `<div class="${className}" data-year="${year}" data-month="${month}" data-day="${day}">
                     <span class="day-number">${day}</span>`;
                 
                 if (dayData && dayData.total > 0) {
@@ -793,7 +793,18 @@
                 html += `<div class="calendar-day other-month"><span class="day-number">${day}</span></div>`;
             }
             
-            document.getElementById('calendar').innerHTML = html;
+            const calendarEl = document.getElementById('calendar');
+            calendarEl.innerHTML = html;
+            
+            // Добавляем обработчики событий
+            calendarEl.querySelectorAll('.calendar-day:not(.other-month)').forEach(dayEl => {
+                dayEl.addEventListener('click', function() {
+                    const year = parseInt(this.getAttribute('data-year'));
+                    const month = parseInt(this.getAttribute('data-month'));
+                    const day = parseInt(this.getAttribute('data-day'));
+                    window.selectDate(year, month, day);
+                });
+            });
         }
 
         function renderTasks(tasks) {
@@ -833,8 +844,7 @@
                 
                 html += `
                     <div class="task-card ${isCompleted ? 'completed' : ''}" data-task-id="${task.id}">
-                        <div class="checkbox ${isCompleted ? 'checked' : ''}" 
-                             onclick="toggleTaskStatus(${task.id})">
+                        <div class="checkbox ${isCompleted ? 'checked' : ''}" data-task-id="${task.id}">
                         </div>
                         <div class="task-info">
                             <div class="task-title ${isCompleted ? 'completed' : ''}">${safeTitle}</div>
@@ -849,6 +859,25 @@
             });
             
             container.innerHTML = html;
+            
+            // Добавляем обработчики событий после рендеринга
+            container.querySelectorAll('.checkbox').forEach(checkbox => {
+                checkbox.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const taskId = this.getAttribute('data-task-id');
+                    window.toggleTaskStatus(taskId);
+                });
+            });
+            
+            // Также добавляем клик на всю карточку
+            container.querySelectorAll('.task-card').forEach(card => {
+                card.addEventListener('click', function(e) {
+                    if (!e.target.classList.contains('checkbox')) {
+                        const taskId = this.getAttribute('data-task-id');
+                        window.toggleTaskStatus(taskId);
+                    }
+                });
+            });
         }
 
         window.changeMonth = async function(direction) {
@@ -914,6 +943,12 @@
 
         async function init() {
             try {
+                // Добавляем обработчики событий для кнопок
+                document.getElementById('prevMonthBtn').addEventListener('click', () => window.changeMonth(-1));
+                document.getElementById('nextMonthBtn').addEventListener('click', () => window.changeMonth(1));
+                document.getElementById('addTaskBtn').addEventListener('click', window.addNewTask);
+                document.getElementById('refreshBtn').addEventListener('click', window.refreshData);
+                
                 renderCalendar();
                 
                 const container = document.getElementById('tasksList');
