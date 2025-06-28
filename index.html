@@ -6,79 +6,70 @@
     <title>Task Tracker Mini App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* --------- RESET & BASE --------- */
+        /* ---------- BASE & RESET ---------- */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:rgba(0,0,0,.1)}
         body{
             font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Roboto',sans-serif;
-            background-color:var(--tg-theme-bg-color,#fff);
-            color:var(--tg-theme-text-color,#000);
-            overflow-x:hidden;-webkit-font-smoothing:antialiased
+            background:#ffffff;color:#000;overflow-x:hidden;-webkit-font-smoothing:antialiased
         }
-        .app{min-height:100vh;background:var(--tg-theme-secondary-bg-color,#f2f2f7)}
-
-        /* --------- HEADER --------- */
-        .header{background:var(--tg-theme-bg-color,#fff);padding:16px;box-shadow:0 1px 0 0 rgba(0,0,0,.1);position:sticky;top:0;z-index:100}
+        .app{min-height:100vh;background:#f2f2f7}
+        /* ---------- HEADER ---------- */
+        .header{background:#fff;padding:16px;box-shadow:0 1px 0 0 rgba(0,0,0,.1);position:sticky;top:0;z-index:100}
         .user-info{display:flex;align-items:center;gap:12px;margin-bottom:12px}
         .avatar{width:48px;height:48px;border-radius:24px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:20px}
         .user-details{flex:1}
-        .user-name{font-size:18px;font-weight:600;color:var(--tg-theme-text-color,#000)}
-        .user-rank{font-size:14px;color:var(--tg-theme-hint-color,#8e8e93);margin-top:2px}
+        .user-name{font-size:18px;font-weight:600}
+        .user-rank{font-size:14px;color:#8e8e93;margin-top:2px}
         .stats-row{display:flex;gap:20px}
-        .stat-item{display:flex;align-items:center;gap:6px;font-size:15px;color:var(--tg-theme-text-color,#000)}
+        .stat-item{display:flex;align-items:center;gap:6px;font-size:15px}
         .stat-value{font-weight:600}
-
-        /* --------- CALENDAR --------- */
-        .calendar-section{background:var(--tg-theme-bg-color,#fff);margin:16px;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+        /* ---------- CALENDAR ---------- */
+        .calendar-section{background:#fff;margin:16px;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
         .month-navigation{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
-        .month-title{font-size:18px;font-weight:600;color:var(--tg-theme-text-color,#000);text-transform:capitalize}
-        .nav-btn{width:36px;height:36px;border:none;background:var(--tg-theme-button-color,#007aff);color:var(--tg-theme-button-text-color,#fff);border-radius:18px;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .2s}
+        .month-title{font-size:18px;font-weight:600;text-transform:capitalize}
+        .nav-btn{width:36px;height:36px;border:none;background:#007aff;color:#fff;border-radius:18px;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .2s}
         .nav-btn:active{opacity:.7}
         .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-        .weekday-label{text-align:center;font-size:12px;color:var(--tg-theme-hint-color,#8e8e93);font-weight:500;padding:8px 0}
-        .calendar-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;position:relative;background:var(--tg-theme-secondary-bg-color,#f2f2f7);transition:all .2s}
+        .weekday-label{text-align:center;font-size:12px;color:#8e8e93;font-weight:500;padding:8px 0}
+        .calendar-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;position:relative;background:#f2f2f7;transition:all .2s}
         .calendar-day:active{transform:scale(.95)}
         .calendar-day.other-month{opacity:.3}
-        .calendar-day.today{background:#e5f1ff;color:var(--tg-theme-link-color,#007aff);font-weight:600}
-        .calendar-day.selected{background:var(--tg-theme-button-color,#007aff);color:var(--tg-theme-button-text-color,#fff)}
+        .calendar-day.today{background:#e5f1ff;color:#007aff;font-weight:600}
+        .calendar-day.selected{background:#007aff;color:#fff}
         .day-number{font-size:15px}
         .task-dots{position:absolute;bottom:4px;display:flex;gap:2px}
-        .task-dot{width:4px;height:4px;border-radius:2px;background:var(--tg-theme-hint-color,#8e8e93)}
+        .task-dot{width:4px;height:4px;border-radius:2px;background:#8e8e93}
         .task-dot.completed{background:#34c759}
-
-        /* --------- TASK LIST --------- */
+        /* ---------- TASKS ---------- */
         .tasks-section{margin:16px}
-        .tasks-header{font-size:20px;font-weight:600;color:var(--tg-theme-text-color,#000);margin-bottom:16px;padding:0 4px}
-        .task-card{background:var(--tg-theme-bg-color,#fff);border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);display:flex;align-items:flex-start;gap:12px;transition:opacity .2s}
+        .tasks-header{font-size:20px;font-weight:600;margin-bottom:16px;padding:0 4px}
+        .task-card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);display:flex;align-items:flex-start;gap:12px;transition:opacity .2s}
         .task-card.completed{opacity:.6}
-        .checkbox{width:24px;height:24px;border:2px solid var(--tg-theme-button-color,#007aff);border-radius:6px;flex-shrink:0;cursor:pointer;position:relative;transition:all .2s;background:transparent}
-        .checkbox.checked{background:var(--tg-theme-button-color,#007aff);border-color:var(--tg-theme-button-color,#007aff)}
-        .checkbox.checked::after{content:'';position:absolute;left:7px;top:3px;width:6px;height:12px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+        .checkbox{width:24px;height:24px;border:2px solid #007aff;border-radius:6px;flex-shrink:0;cursor:pointer;position:relative;transition:all .2s;user-select:none}
+        .checkbox.checked{background:#007aff;border-color:#007aff}
+        .checkbox.checked:after{content:"";position:absolute;left:7px;top:3px;width:6px;height:12px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
         .task-info{flex:1}
-        .task-title{font-size:16px;font-weight:500;color:var(--tg-theme-text-color,#000);margin-bottom:6px;line-height:1.3;transition:text-decoration .2s}
+        .task-title{font-size:16px;font-weight:500;margin-bottom:6px;line-height:1.3}
         .task-title.completed{text-decoration:line-through}
-        .task-meta{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--tg-theme-hint-color,#8e8e93)}
+        .task-meta{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:#8e8e93}
         .priority-badge{padding:2px 8px;border-radius:4px;font-size:12px;font-weight:500;color:#fff}
         .priority-high{background:#ff3b30}.priority-medium{background:#ff9500}.priority-low{background:#34c759}
-        .empty-state{text-align:center;padding:60px 20px;color:var(--tg-theme-hint-color,#8e8e93)}
+        .empty-state{text-align:center;padding:60px 20px;color:#8e8e93}
         .empty-icon{font-size:64px;margin-bottom:16px;opacity:.5}
         .empty-title{font-size:18px;font-weight:500;margin-bottom:8px}
         .empty-subtitle{font-size:14px}
         .loading-container{display:flex;justify-content:center;align-items:center;min-height:200px}
-        .spinner{width:40px;height:40px;border:3px solid var(--tg-theme-secondary-bg-color,#f2f2f7);border-top-color:var(--tg-theme-button-color,#007aff);border-radius:50%;animation:spin .8s linear infinite}
+        .spinner{width:40px;height:40px;border:3px solid #f2f2f7;border-top-color:#007aff;border-radius:50%;animation:spin .8s linear infinite}
         @keyframes spin{to{transform:rotate(360deg)}}
-        .fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;background:var(--tg-theme-button-color,#007aff);color:var(--tg-theme-button-text-color,#fff);border:none;border-radius:28px;font-size:28px;box-shadow:0 4px 12px rgba(0,122,255,.3);cursor:pointer;transition:transform .2s;z-index:1000;display:flex;align-items:center;justify-content:center}
+        /* ---------- FAB ---------- */
+        .fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;background:#007aff;color:#fff;border:none;border-radius:28px;font-size:28px;box-shadow:0 4px 12px rgba(0,122,255,.3);cursor:pointer;transition:transform .2s;display:flex;align-items:center;justify-content:center;z-index:1000}
         .fab:active{transform:scale(.9)}
         .error-message{background:#ff3b30;color:#fff;padding:12px 16px;margin:16px;border-radius:8px;font-size:14px}
-        .success-message{background:#34c759;color:#fff;padding:12px 16px;margin:16px;border-radius:8px;font-size:14px;position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:2000;animation:slideIn .3s ease-out}
-        @keyframes slideIn{from{transform:translateX(-50%) translateY(-100%);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
-        .refresh-button{position:absolute;top:16px;right:16px;width:36px;height:36px;border:none;background:transparent;color:var(--tg-theme-hint-color,#8e8e93);font-size:20px;cursor:pointer;border-radius:18px;display:flex;align-items:center;justify-content:center;transition:all .2s}
-        .refresh-button:active{background:var(--tg-theme-secondary-bg-color,#f2f2f7)}
-        .refresh-button.spinning{animation:spin 1s linear infinite}
     </style>
 </head>
 <body>
 <div id="app" class="app">
-    <!-- ---------- HEADER ---------- -->
+    <!-- HEADER -->
     <div class="header">
         <div class="user-info">
             <div class="avatar" id="userAvatar">У</div>
@@ -91,215 +82,75 @@
             <div class="stat-item"><span>🏆</span><span class="stat-value" id="userPoints">0</span></div>
             <div class="stat-item"><span>🔥</span><span class="stat-value" id="userStreak">0</span><span>дней</span></div>
         </div>
-        <button class="refresh-button" id="refreshBtn">↻</button>
     </div>
 
-    <!-- ---------- CALENDAR ---------- -->
+    <!-- CALENDAR -->
     <div class="calendar-section">
         <div class="month-navigation">
-            <button class="nav-btn" id="prevMonthBtn">←</button>
+            <button class="nav-btn" onclick="changeMonth(-1)">←</button>
             <div class="month-title" id="monthTitle">Январь 2025</div>
-            <button class="nav-btn" id="nextMonthBtn">→</button>
+            <button class="nav-btn" onclick="changeMonth(1)">→</button>
         </div>
         <div class="calendar-grid" id="calendar"></div>
     </div>
 
-    <!-- ---------- TASK LIST ---------- -->
+    <!-- TASKS -->
     <div class="tasks-section">
         <div class="tasks-header" id="tasksHeader">Задачи на сегодня</div>
         <div id="tasksList"><div class="loading-container"><div class="spinner"></div></div></div>
     </div>
 
-    <button class="fab" id="addTaskBtn">+</button>
+    <!-- FAB -->
+    <button class="fab" onclick="addNewTask()">+</button>
 </div>
 
 <script>
-(function(){'use strict';
-    /* -------------------- CONSTANTS & UTILS -------------------- */
-    const API_ENDPOINTS={
-        user:'https://nbykanov13.app.n8n.cloud/webhook/ec48838c-e168-4f0e-bf66-054d59e0275a/api/user',
-        tasks:'https://nbykanov13.app.n8n.cloud/webhook/2fd6cb69-88fa-4d08-aba2-221247b6652b/api/tasks',
-        calendar:'https://nbykanov13.app.n8n.cloud/webhook/a8c27692-17b1-45f8-a11f-0e5a7063a5ed/api/calendar',
-        toggleTask:'https://nbykanov13.app.n8n.cloud/webhook/a3911d71-ce2f-4e9c-a05d-f35f1c4779c8/api/tasks'
-    };
+/***************** CONFIG *****************/
+const API_ENDPOINTS={
+    user:'https://nbykanov13.app.n8n.cloud/webhook/ec48838c-e168-4f0e-bf66-054d59e0275a/api/user',
+    tasks:'https://nbykanov13.app.n8n.cloud/webhook/2fd6cb69-88fa-4d08-aba2-221247b6652b/api/tasks',
+    calendar:'https://nbykanov13.app.n8n.cloud/webhook/a8c27692-17b1-45f8-a11f-0e5a7063a5ed/api/calendar',
+    toggleTask:'https://nbykanov13.app.n8n.cloud/webhook/a3911d71-ce2f-4e9c-a05d-f35f1c4779c8/api/tasks'
+};
 
-    let tg=null,telegramUserId=null;
-    if(window.Telegram&&window.Telegram.WebApp){
-        tg=window.Telegram.WebApp;tg.ready();tg.expand();
-        if(tg.initDataUnsafe&&tg.initDataUnsafe.user){telegramUserId=tg.initDataUnsafe.user.id}
-    }
-    if(!telegramUserId){const p=new URLSearchParams(location.search);telegramUserId=parseInt(p.get('user_id'))||123456789}
+/***************** TELEGRAM INIT *****************/
+let tg=null,telegramUserId=null;
+if(window.Telegram&&window.Telegram.WebApp){tg=Telegram.WebApp;tg.ready();tg.expand();telegramUserId=tg.initDataUnsafe?.user?.id}
+if(!telegramUserId){telegramUserId=parseInt(new URLSearchParams(location.search).get('user_id'))||123456789}
 
-    const today=new Date();
-    let currentDate=new Date(),selectedDate=new Date();
-    let calendarData={},currentTasks=[];
-    let userInfo={name:'Пользователь',rank:'Кожаный мешок',points:0,streak:0};
+/***************** STATE *****************/
+const today=new Date();
+let currentDate=new Date(),selectedDate=new Date();
+let calendarData={},currentTasks=[],userInfo={name:'Пользователь',rank:'Кожаный мешок',points:0,streak:0};
 
-    const formatDateKey=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    const escapeHtml=txt=>txt.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"})[m]);
+const $=id=>document.getElementById(id);
+const formatKey=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
-    /* -------------------- UI HELPERS -------------------- */
-    function showToast(msg,type){const div=document.createElement('div');div.className=(type==='error'?'error-message':'success-message');div.textContent=msg;document.body.appendChild(div);setTimeout(()=>div.remove(),type==='error'?5000:3000)}
+/***************** API WRAPPER *****************/
+async function api(url,opt={}){const r=await fetch(url,{headers:{'Content-Type':'application/json'},...opt});if(!r.ok)throw new Error(r.status);return r.json();}
 
-    /* -------------------- API WRAPPER -------------------- */
-    async function apiRequest(url,opts={}){
-        const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
-        const res=await fetch(url,{headers:{'Content-Type':'application/json',...opts.headers},signal:controller.signal,...opts});
-        clearTimeout(timer);
-        if(!res.ok)throw new Error('HTTP '+res.status);
-        return res.json();
-    }
+/***************** LOAD DATA *****************/
+async function loadUser(){try{const d=await api(`${API_ENDPOINTS.user}/${telegramUserId}`);const u=Array.isArray(d)?d[0]:d;userInfo={name:u.first_name||'Пользователь',rank:u.rank||'Кожаный мешок',points:+u.points||0,streak:+u.current_streak||0};updateUserUI();}catch{}}
+async function loadCalendar(){try{const y=currentDate.getFullYear(),m=currentDate.getMonth()+1;const data=await api(`${API_ENDPOINTS.calendar}/${telegramUserId}/${y}/${m}`);calendarData={};(Array.isArray(data)?data:[data]).filter(Boolean).forEach(day=>{calendarData[formatKey(new Date(day.date))]={total:+day.total_tasks||0,completed:+day.completed_tasks||0}});}catch{calendarData={}}renderCalendar();}
+async function loadTasks(){try{const dateStr=formatKey(selectedDate);const res=await api(`${API_ENDPOINTS.tasks}/${telegramUserId}/${dateStr}`);const arr=Array.isArray(res)?res:(res? [res]:[]);currentTasks=arr.map(t=>({...t,id:Number(t.id)}));renderTasks();}catch{currentTasks=[];renderTasks();}}
 
-    /* -------------------- DATA LOADERS -------------------- */
-    async function loadUserData(){
-        try{
-            const data=await apiRequest(`${API_ENDPOINTS.user}/${telegramUserId}`);
-            if(Array.isArray(data)&&data[0]){
-                const u=data[0];userInfo={name:u.first_name||'Пользователь',rank:u.rank||'Кожаный мешок',points:+u.points||0,streak:+u.current_streak||0};
-            }
-        }catch{userInfo={name:'Гость',rank:'Новичок',points:0,streak:0}}
-        updateUserUI();
-    }
+/***************** RENDERERS *****************/
+function updateUserUI(){$('userName').textContent=userInfo.name;$('userRank').textContent=userInfo.rank;$('userPoints').textContent=userInfo.points;$('userStreak').textContent=userInfo.streak;$('userAvatar').textContent=userInfo.name[0]?.toUpperCase()||'П';}
+function renderCalendar(){const y=currentDate.getFullYear(),m=currentDate.getMonth();$('monthTitle').textContent=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'][m]+' '+y;const first=new Date(y,m,1),last=new Date(y,m+1,0),prevLast=new Date(y,m,0);const startDow=first.getDay(),days=last.getDate();let html='';['Вс','Пн','Вт','Ср','Чт','Пт','Сб'].forEach(d=>html+=`<div class="weekday-label">${d}</div>`);for(let i=startDow-1;i>=0;i--){html+=`<div class="calendar-day other-month"><span class="day-number">${prevLast.getDate()-i}</span></div>`;}for(let d=1;d<=days;d++){const date=new Date(y,m,d),key=formatKey(date);const cls=['calendar-day'];if(date.toDateString()===today.toDateString())cls.push('today');if(date.toDateString()===selectedDate.toDateString())cls.push('selected');html+=`<div class="${cls.join(' ')}" onclick="selectDate(${y},${m},${d})"><span class="day-number">${d}</span>`;const data=calendarData[key];if(data?.total){html+='<div class="task-dots">';for(let i=0;i<Math.min(data.total,3);i++){html+=`<div class="task-dot ${i<data.completed?'completed':''}"></div>`;}html+='</div>';}html+='</div>';}
+const rem=42-(startDow+days);for(let d=1;d<=rem;d++){html+=`<div class="calendar-day other-month"><span class="day-number">${d}</span></div>`;}$('calendar').innerHTML=html;}
+function renderTasks(){const container=$('tasksList');const opts={weekday:'long',day:'numeric',month:'long'};$('tasksHeader').textContent=selectedDate.toLocaleDateString('ru-RU',opts);if(!currentTasks.length){container.innerHTML='<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-title">Нет задач</div><div class="empty-subtitle">Добавьте задачу через бота</div></div>';return;}container.innerHTML=currentTasks.map(t=>{const done=t.status==='completed';const pr={'high':'Высокий','medium':'Средний','low':'Низкий'}[t.priority]||'Без приор.';const time=t.deadline?new Date(t.deadline).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'';return`<div class="task-card ${done?'completed':''}" data-task-id="${t.id}" onclick="cardToggle(event,${t.id})"><div class="checkbox ${done?'checked':''}" data-task-id="${t.id}" onclick="toggleTaskStatus(event,${t.id})"></div><div class="task-info"><div class="task-title ${done?'completed':''}">${t.title}</div><div class="task-meta">${time?`<span>⏰ ${time}</span>`:''}<span class="priority-badge priority-${t.priority}">${pr}</span>${t.points_earned?`<span>🏆 ${t.points_earned} очков</span>`:''}</div></div></div>`}).join('');}
 
-    async function loadCalendarData(){
-        try{
-            const y=currentDate.getFullYear(),m=currentDate.getMonth()+1;
-            const data=await apiRequest(`${API_ENDPOINTS.calendar}/${telegramUserId}/${y}/${m}`);
-            calendarData={};
-            (Array.isArray(data)?data:[]).forEach(d=>{calendarData[formatDateKey(new Date(d.date))]={total:+d.total_tasks||0,completed:+d.completed_tasks||0}});
-        }catch{calendarData={}}
-        renderCalendar();
-    }
+/***************** ACTIONS *****************/
+function cardToggle(e,id){if(e.target.classList.contains('checkbox'))return;toggleTaskStatus(e,id);} // click on card except checkbox
+async function toggleTaskStatus(e,id){if(e) e.stopPropagation();id=Number(id);const task=currentTasks.find(t=>t.id===id);if(!task)return;const done=task.status==='completed';task.status=done?'pending':'completed';renderTasks();tg?.HapticFeedback?.impactOccurred('light');try{await api(`${API_ENDPOINTS.toggleTask}/${id}/toggle',{method:'POST',body:JSON.stringify({task_id:id,user_id:telegramUserId})});loadCalendar();if(!done)loadUser();}catch{task.status=done?'completed':'pending';renderTasks();}}
 
-    async function loadTasks(){
-        const dateStr=formatDateKey(selectedDate);
-        try{
-            const res=await apiRequest(`${API_ENDPOINTS.tasks}/${telegramUserId}/${dateStr}`);
-            let tasks=Array.isArray(res)?res:(res?.data||res?.tasks||res?.id?[res]:[]);
-            currentTasks=tasks.filter(t=>{
-                if(!t||typeof t!=="object")return false;
-                const dKey=t.deadline?formatDateKey(new Date(t.deadline)):formatDateKey(new Date(t.created_at));
-                return dKey===dateStr;
-            }).map(t=>({...t,id:Number(t.id)})); // id всегда число
-        }catch{currentTasks=[]}
-        renderTasks();
-    }
+/***************** NAVIGATION *****************/
+function changeMonth(dir){currentDate.setMonth(currentDate.getMonth()+dir);loadCalendar();}
+function selectDate(y,m,d){selectedDate=new Date(y,m,d);renderCalendar();loadTasks();}
+function addNewTask(){tg?.HapticFeedback?.impactOccurred('medium');if(tg){tg.sendData(`add_task_${formatKey(selectedDate)}`);tg.close();}else alert('Только в Telegram');}
 
-    /* -------------------- RENDERERS -------------------- */
-    function updateUserUI(){
-        document.getElementById('userName').textContent=userInfo.name;
-        document.getElementById('userRank').textContent=userInfo.rank;
-        document.getElementById('userPoints').textContent=userInfo.points;
-        document.getElementById('userStreak').textContent=userInfo.streak;
-        document.getElementById('userAvatar').textContent=userInfo.name[0]?.toUpperCase()||'П';
-    }
-
-    function renderCalendar(){
-        const y=currentDate.getFullYear(),m=currentDate.getMonth();
-        const monthNames=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-        document.getElementById('monthTitle').textContent=`${monthNames[m]} ${y}`;
-        const fDay=new Date(y,m,1),lDay=new Date(y,m+1,0),prevLast=new Date(y,m,0);
-        const startDow=fDay.getDay(),days=lDay.getDate();
-        let html='';
-        ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'].forEach(d=>html+=`<div class="weekday-label">${d}</div>`);
-        // пред.дни
-        for(let i=startDow-1;i>=0;i--){html+=`<div class="calendar-day other-month"><span class="day-number">${prevLast.getDate()-i}</span></div>`}
-        // текущий месяц
-        for(let d=1;d<=days;d++){
-            const date=new Date(y,m,d),dKey=formatDateKey(date);const dayData=calendarData[dKey]||{};
-            const cls=['calendar-day'];if(date.toDateString()===today.toDateString())cls.push('today');if(date.toDateString()===selectedDate.toDateString())cls.push('selected');
-            html+=`<div class="${cls.join(' ')}" data-year="${y}" data-month="${m}" data-day="${d}"><span class="day-number">${d}</span>`;
-            if(dayData.total>0){html+='<div class="task-dots">';const dots=Math.min(dayData.total,3);for(let i=0;i<dots;i++){html+=`<div class="task-dot ${i<dayData.completed?'completed':''}"></div>`}html+='</div>'}
-            html+='</div>';
-        }
-        // след.дни
-        const remaining=42-(startDow+days);for(let d=1;d<=remaining;d++){html+=`<div class="calendar-day other-month"><span class="day-number">${d}</span></div>`}
-        const cal=document.getElementById('calendar');cal.innerHTML=html;
-        cal.querySelectorAll('.calendar-day:not(.other-month)').forEach(el=>el.addEventListener('click',()=>selectDate(+el.dataset.year,+el.dataset.month,+el.dataset.day)));
-    }
-
-    function renderTasks(){
-        const container=document.getElementById('tasksList');
-        const opts={weekday:'long',day:'numeric',month:'long'};
-        document.getElementById('tasksHeader').textContent=selectedDate.toLocaleDateString('ru-RU',opts);
-        if(!currentTasks.length){container.innerHTML=`<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-title">Нет задач</div><div class="empty-subtitle">Добавьте задачу через бота</div></div>`;return}
-        container.innerHTML=currentTasks.map(t=>{
-            const done=t.status==='completed',priority={'high':'Высокий','medium':'Средний','low':'Низкий'}[t.priority]||'Без приор.';
-            const deadline=t.deadline?new Date(t.deadline).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'';
-            return `<div class="task-card ${done?'completed':''}" data-task-id="${t.id}">
-                        <div class="checkbox ${done?'checked':''}" data-task-id="${t.id}"></div>
-                        <div class="task-info">
-                            <div class="task-title ${done?'completed':''}">${escapeHtml(t.title||'')}</div>
-                            <div class="task-meta">
-                                ${deadline?`<span>⏰ ${deadline}</span>`:''}
-                                <span class="priority-badge priority-${t.priority}">${priority}</span>
-                                ${t.points_earned?`<span>🏆 ${t.points_earned} очков</span>`:''}
-                            </div>
-                        </div>
-                    </div>`;
-        }).join('');
-        container.querySelectorAll('.checkbox').forEach(cb=>cb.addEventListener('click',e=>{e.stopPropagation();toggleTaskStatus(+cb.dataset.taskId);}));
-        container.querySelectorAll('.task-card').forEach(card=>card.addEventListener('click',e=>{if(!e.target.classList.contains('checkbox'))toggleTaskStatus(+card.dataset.taskId);}));
-    }
-
-    /* -------------------- ACTIONS -------------------- */
-    async function toggleTaskStatus(taskId){
-        const task=currentTasks.find(t=>t.id===taskId);
-        if(!task)return;
-        const card=document.querySelector(`.task-card[data-task-id="${taskId}"]`);
-        const checkbox=card.querySelector('.checkbox');
-        const title=card.querySelector('.task-title');
-        const wasCompleted=task.status==='completed';
-        // оптимистичный UI
-        checkbox.classList.toggle('checked',!wasCompleted);
-        card.classList.toggle('completed',!wasCompleted);
-        title.classList.toggle('completed',!wasCompleted);
-        task.status=wasCompleted?'pending':'completed';
-        tg?.HapticFeedback?.impactOccurred?.('light');
-        try{
-            await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle`,{method:'POST',body:JSON.stringify({task_id:taskId,user_id:telegramUserId})});
-            showToast(wasCompleted?'Задача возвращена в работу':'Задача выполнена!','success');
-            setTimeout(loadCalendarData,500);if(!wasCompleted)setTimeout(loadUserData,1000);
-        }catch(err){
-            // откат UI
-            checkbox.classList.toggle('checked',wasCompleted);
-            card.classList.toggle('completed',wasCompleted);
-            title.classList.toggle('completed',wasCompleted);
-            task.status=wasCompleted?'completed':'pending';
-            showToast('Не удалось обновить статус задачи','error');
-        }
-    }
-
-    /* -------------------- NAVIGATION -------------------- */
-    function changeMonth(dir){currentDate.setMonth(currentDate.getMonth()+dir);loadCalendarData();tg?.HapticFeedback?.impactOccurred?.('light')}
-    function selectDate(y,m,d){selectedDate=new Date(y,m,d);renderCalendar();loadTasks();tg?.HapticFeedback?.selectionChanged?.()}
-    function addNewTask(){tg?.HapticFeedback?.impactOccurred?.('medium');if(tg){tg.sendData(`add_task_${formatDateKey(selectedDate)}`);tg.close()}else alert('Добавление задач доступно только в Telegram')}
-    async function refreshData(){const btn=document.getElementById('refreshBtn');btn.classList.add('spinning');try{await Promise.all([loadUserData(),loadCalendarData(),loadTasks()]);showToast('Данные обновлены','success')}catch{showToast('Ошибка при обновлении данных','error')}btn.classList.remove('spinning');tg?.HapticFeedback?.impactOccurred?.('light')}
-
-    /* -------------------- INIT -------------------- */
-    async function init(){
-        document.getElementById('prevMonthBtn').addEventListener('click',()=>changeMonth(-1));
-        document.getElementById('nextMonthBtn').addEventListener('click',()=>changeMonth(1));
-        document.getElementById('addTaskBtn').addEventListener('click',addNewTask);
-        document.getElementById('refreshBtn').addEventListener('click',refreshData);
-        renderCalendar();
-        document.getElementById('tasksList').innerHTML='<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Загружаем данные...</div></div>';
-        await loadUserData();await loadCalendarData();await loadTasks();
-    }
-    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
-
-    /* -------------------- THEME LISTENER -------------------- */
-    tg?.onEvent('themeChanged',()=>{
-        const p=tg.themeParams||{};const root=document.documentElement;
-        root.style.setProperty('--tg-theme-bg-color',p.bg_color||'#fff');
-        root.style.setProperty('--tg-theme-text-color',p.text_color||'#000');
-        root.style.setProperty('--tg-theme-hint-color',p.hint_color||'#8e8e93');
-        root.style.setProperty('--tg-theme-link-color',p.link_color||'#007aff');
-        root.style.setProperty('--tg-theme-button-color',p.button_color||'#007aff');
-        root.style.setProperty('--tg-theme-button-text-color',p.button_text_color||'#fff');
-        root.style.setProperty('--tg-theme-secondary-bg-color',p.secondary_bg_color||'#f2f2f7');
-    });
-})();
+/***************** INIT *****************/
+(async ()=>{updateUserUI();renderCalendar();await loadUser();await loadCalendar();await loadTasks();})();
 </script>
 </body>
 </html>
