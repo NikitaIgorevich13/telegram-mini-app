@@ -398,6 +398,32 @@
                 opacity: 1;
             }
         }
+        
+        .refresh-button {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: transparent;
+            color: var(--tg-theme-hint-color, #8e8e93);
+            font-size: 20px;
+            cursor: pointer;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .refresh-button:active {
+            background: var(--tg-theme-secondary-bg-color, #f2f2f7);
+        }
+        
+        .refresh-button.spinning {
+            animation: spin 1s linear infinite;
+        }
     </style>
 </head>
 <body>
@@ -422,6 +448,7 @@
                     <span>дней</span>
                 </div>
             </div>
+            <button class="refresh-button" onclick="refreshData()" id="refreshBtn">↻</button>
         </div>
 
         <!-- Calendar -->
@@ -528,24 +555,46 @@
                 console.log(`API Request: ${options.method || 'GET'} ${url}`);
                 if (options.body) console.log('Request body:', options.body);
                 
+                // Добавляем таймаут для запросов
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 секунд таймаут
+                
                 const response = await fetch(url, {
                     headers: {
                         'Content-Type': 'application/json',
                         ...options.headers
                     },
+                    signal: controller.signal,
                     ...options
                 });
+                
+                clearTimeout(timeoutId);
                 
                 console.log(`Response status: ${response.status}`);
                 
                 if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Response error text:', errorText);
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
-                const data = await response.json();
-                console.log('Response data:', data);
-                return data;
+                const text = await response.text();
+                console.log('Response text:', text);
+                
+                try {
+                    const data = JSON.parse(text);
+                    console.log('Parsed response data:', data);
+                    return data;
+                } catch (e) {
+                    console.error('JSON parse error:', e);
+                    console.error('Invalid JSON:', text);
+                    throw new Error('Invalid JSON response');
+                }
             } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.error('Request timeout');
+                    throw new Error('Запрос превысил время ожидания');
+                }
                 console.error('API Error:', error);
                 throw error;
             }
@@ -554,7 +603,13 @@
         // Загрузка данных пользователя
         async function loadUserData() {
             try {
-                const userData = await apiRequest(`${API_ENDPOINTS.user}/${telegramUserId}`);
+                console.log('loadUserData: Starting request');
+                const url = `${API_ENDPOINTS.user}/${telegramUserId}`;
+                console.log('loadUserData: URL:', url);
+                
+                const userData = await apiRequest(url);
+                
+                console.log('loadUserData: Raw response:', userData);
                 
                 if (userData && userData.length > 0) {
                     const user = userData[0];
@@ -565,18 +620,25 @@
                         streak: user.current_streak || 0
                     };
                     
+                    console.log('loadUserData: Parsed user info:', userInfo);
+                    
                     // Обновляем UI
                     document.getElementById('userName').textContent = userInfo.name;
                     document.getElementById('userRank').textContent = userInfo.rank;
                     document.getElementById('userPoints').textContent = userInfo.points;
                     document.getElementById('userStreak').textContent = userInfo.streak;
                     document.getElementById('userAvatar').textContent = userInfo.name[0].toUpperCase();
+                } else {
+                    console.warn('loadUserData: No user data found');
+                    throw new Error('Пользователь не найден');
                 }
             } catch (error) {
-                console.error('Error loading user data:', error);
+                console.error('loadUserData: Error:', error);
                 // Показываем дефолтные данные
                 document.getElementById('userName').textContent = 'Гость';
                 document.getElementById('userRank').textContent = 'Новичок';
+                document.getElementById('userAvatar').textContent = 'Г';
+                throw error; // Пробрасываем ошибку дальше
             }
         }
 
@@ -871,34 +933,149 @@
             }
         }
 
-        // Инициализация приложения
-        async function init() {
+        // Обновление данных
+        async function refreshData() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            refreshBtn.classList.add('spinning');
+            
             try {
-                console.log('Initializing app for user:', telegramUserId);
-                
-                // Рендерим пустой календарь сразу
-                renderCalendar();
-                
-                // Загружаем данные параллельно
                 await Promise.all([
                     loadUserData(),
                     loadCalendarData(),
                     loadTasks()
                 ]);
+                showSuccess('Данные обновлены');
+            } catch (error) {
+                showError('Ошибка при обновлении данных');
+            } finally {
+                refreshBtn.classList.remove('spinning');
+            }
+            
+            if (tg && tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+        }
+
+        // Инициализация приложения
+        async function init() {
+            try {
+                console.log('=== APP INITIALIZATION START ===');
+                console.log('Telegram user ID:', telegramUserId);
+                console.log('Current date:', currentDate);
+                console.log('Selected date:', selectedDate);
                 
-                console.log('App initialized successfully');
+                // Рендерим пустой календарь сразу
+                renderCalendar();
+                
+                // Убираем спиннер и показываем пустое состояние
+                const container = document.getElementById('tasksList');
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">⏳</div>
+                        <div class="empty-title">Загружаем данные...</div>
+                    </div>
+                `;
+                
+                // Загружаем данные последовательно для лучшей отладки
+                console.log('Loading user data...');
+                try {
+                    await loadUserData();
+                    console.log('✓ User data loaded');
+                } catch (error) {
+                    console.error('✗ User data failed:', error);
+                }
+                
+                console.log('Loading calendar data...');
+                try {
+                    await loadCalendarData();
+                    console.log('✓ Calendar data loaded');
+                } catch (error) {
+                    console.error('✗ Calendar data failed:', error);
+                }
+                
+                console.log('Loading tasks...');
+                try {
+                    await loadTasks();
+                    console.log('✓ Tasks loaded');
+                } catch (error) {
+                    console.error('✗ Tasks failed:', error);
+                    // Показываем пустое состояние даже при ошибке
+                    renderTasks([]);
+                }
+                
+                console.log('=== APP INITIALIZATION COMPLETE ===');
                 
             } catch (error) {
-                console.error('Initialization error:', error);
+                console.error('Critical initialization error:', error);
                 showError('Ошибка при загрузке данных');
+                
+                // Показываем пустое состояние
+                const container = document.getElementById('tasksList');
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">❌</div>
+                        <div class="empty-title">Ошибка загрузки</div>
+                        <div class="empty-subtitle">Попробуйте обновить страницу</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Проверка соединения
+        async function checkConnection() {
+            console.log('=== CONNECTION CHECK ===');
+            console.log('User ID:', telegramUserId);
+            console.log('API Endpoints:', API_ENDPOINTS);
+            
+            // Проверяем доступность API
+            try {
+                const testUrl = `${API_ENDPOINTS.user}/${telegramUserId}`;
+                console.log('Testing URL:', testUrl);
+                
+                const response = await fetch(testUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('Test response status:', response.status);
+                console.log('Test response headers:', Object.fromEntries(response.headers.entries()));
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API Error response:', errorText);
+                }
+                
+                return response.ok;
+            } catch (error) {
+                console.error('Connection test failed:', error);
+                return false;
             }
         }
 
         // Запуск приложения
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
+            document.addEventListener('DOMContentLoaded', async () => {
+                // Сначала проверяем соединение
+                const isConnected = await checkConnection();
+                console.log('Connection status:', isConnected);
+                
+                if (!isConnected) {
+                    showError('Не удается подключиться к серверу');
+                }
+                
+                // Инициализируем приложение в любом случае
+                init();
+            });
         } else {
-            init();
+            checkConnection().then(isConnected => {
+                console.log('Connection status:', isConnected);
+                if (!isConnected) {
+                    showError('Не удается подключиться к серверу');
+                }
+                init();
+            });
         }
 
         // Обработка событий Telegram
