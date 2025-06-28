@@ -662,15 +662,72 @@
 
         // Локальное хранилище для несинхронизированных изменений
         let pendingChanges = [];
+        let localTaskStates = {}; // Локальное состояние задач
+        
+        // Загрузка сохраненных состояний
+        function loadLocalStates() {
+            try {
+                // Используем sessionStorage вместо localStorage
+                const savedStates = sessionStorage.getItem(`taskStates_${telegramUserId}`);
+                const savedChanges = sessionStorage.getItem(`pendingChanges_${telegramUserId}`);
+                
+                if (savedStates) {
+                    localTaskStates = JSON.parse(savedStates);
+                    console.log('Loaded local task states:', localTaskStates);
+                }
+                
+                if (savedChanges) {
+                    pendingChanges = JSON.parse(savedChanges);
+                    console.log('Loaded pending changes:', pendingChanges);
+                }
+            } catch (error) {
+                console.error('Error loading local states:', error);
+                // Если sessionStorage не работает, используем память
+                localTaskStates = {};
+                pendingChanges = [];
+            }
+        }
+        
+        // Сохранение состояний
+        function saveLocalStates() {
+            try {
+                sessionStorage.setItem(`taskStates_${telegramUserId}`, JSON.stringify(localTaskStates));
+                sessionStorage.setItem(`pendingChanges_${telegramUserId}`, JSON.stringify(pendingChanges));
+            } catch (error) {
+                console.error('Error saving local states:', error);
+                // Если не удается сохранить, продолжаем работу
+            }
+        }
         
         // Сохранение изменений для последующей синхронизации
         function savePendingChange(taskId, newStatus) {
-            pendingChanges.push({
-                taskId: parseInt(taskId),
-                status: newStatus,
-                timestamp: new Date().toISOString()
-            });
-            console.log('Saved pending change:', pendingChanges);
+            const taskIdNum = parseInt(taskId);
+            
+            // Обновляем локальное состояние
+            localTaskStates[taskIdNum] = newStatus;
+            
+            // Добавляем в очередь изменений
+            const existingIndex = pendingChanges.findIndex(c => c.taskId === taskIdNum);
+            if (existingIndex >= 0) {
+                pendingChanges[existingIndex] = {
+                    taskId: taskIdNum,
+                    status: newStatus,
+                    timestamp: new Date().toISOString()
+                };
+            } else {
+                pendingChanges.push({
+                    taskId: taskIdNum,
+                    status: newStatus,
+                    timestamp: new Date().toISOString()
+                });
+            }
+            
+            console.log('Saved pending change:', { taskId: taskIdNum, status: newStatus });
+            console.log('Local states:', localTaskStates);
+            console.log('Pending changes:', pendingChanges);
+            
+            // Сохраняем в storage
+            saveLocalStates();
         }
         
         // Попытка синхронизации всех изменений
@@ -679,6 +736,7 @@
             
             console.log('Syncing pending changes:', pendingChanges);
             const failedChanges = [];
+            const syncedTaskIds = [];
             let successCount = 0;
             
             for (const change of pendingChanges) {
@@ -694,6 +752,7 @@
                     
                     console.log('✅ Synced change for task:', change.taskId, 'Result:', result);
                     successCount++;
+                    syncedTaskIds.push(change.taskId);
                     
                 } catch (error) {
                     console.error('Failed to sync task:', change.taskId, error);
@@ -705,7 +764,13 @@
                 }
             }
             
+            // Удаляем синхронизированные состояния
+            syncedTaskIds.forEach(taskId => {
+                delete localTaskStates[taskId];
+            });
+            
             pendingChanges = failedChanges;
+            saveLocalStates();
             
             if (successCount > 0) {
                 console.log(`Successfully synced ${successCount} changes`);
@@ -895,10 +960,18 @@
                 return taskDate === selectedDateStr;
             });
             
+            // Применяем локальные состояния к задачам
+            filteredTasks.forEach(task => {
+                if (localTaskStates.hasOwnProperty(task.id)) {
+                    console.log(`Applying local state for task ${task.id}: ${localTaskStates[task.id]}`);
+                    task.status = localTaskStates[task.id];
+                }
+            });
+            
             // Обновляем currentTasks отфильтрованными задачами
             currentTasks = filteredTasks;
             
-            console.log('Filtered tasks:', filteredTasks);
+            console.log('Filtered tasks with local states:', filteredTasks);
             console.log('Current tasks updated:', currentTasks);
             
             if (filteredTasks.length === 0) {
@@ -927,7 +1000,7 @@
                     });
                 }
                 
-                console.log(`Rendering task ${task.id}, completed: ${isCompleted}`);
+                console.log(`Rendering task ${task.id}, status: ${task.status}, completed: ${isCompleted}`);
                 
                 // Экранируем title для безопасности
                 const safeTitle = escapeHtml(task.title || '');
@@ -1060,6 +1133,9 @@
 
         async function init() {
             try {
+                // Загружаем сохраненные состояния
+                loadLocalStates();
+                
                 renderCalendar();
                 
                 const container = document.getElementById('tasksList');
