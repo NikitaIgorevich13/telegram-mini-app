@@ -28,7 +28,6 @@
             background: var(--tg-theme-secondary-bg-color, #f2f2f7);
         }
 
-        /* Header Styles */
         .header {
             background: var(--tg-theme-bg-color, #ffffff);
             padding: 16px;
@@ -91,7 +90,6 @@
             font-weight: 600;
         }
 
-        /* Calendar Styles */
         .calendar-section {
             background: var(--tg-theme-bg-color, white);
             margin: 16px;
@@ -201,7 +199,6 @@
             background: #34c759;
         }
 
-        /* Tasks Section */
         .tasks-section {
             margin: 16px;
         }
@@ -318,7 +315,6 @@
             font-size: 14px;
         }
 
-        /* Loading State */
         .loading-container {
             display: flex;
             justify-content: center;
@@ -339,7 +335,6 @@
             to { transform: rotate(360deg); }
         }
 
-        /* FAB Button */
         .fab {
             position: fixed;
             bottom: 24px;
@@ -428,7 +423,6 @@
 </head>
 <body>
     <div id="app" class="app">
-        <!-- Header -->
         <div class="header">
             <div class="user-info">
                 <div class="avatar" id="userAvatar">У</div>
@@ -451,7 +445,6 @@
             <button class="refresh-button" onclick="refreshData()" id="refreshBtn">↻</button>
         </div>
 
-        <!-- Calendar -->
         <div class="calendar-section">
             <div class="month-navigation">
                 <button class="nav-btn" onclick="changeMonth(-1)">←</button>
@@ -461,7 +454,6 @@
             <div class="calendar-grid" id="calendar"></div>
         </div>
 
-        <!-- Tasks -->
         <div class="tasks-section">
             <div class="tasks-header" id="tasksHeader">Задачи на сегодня</div>
             <div id="tasksList">
@@ -471,12 +463,13 @@
             </div>
         </div>
 
-        <!-- FAB -->
         <button class="fab" onclick="addNewTask()">+</button>
     </div>
 
     <script>
-        // Конфигурация API
+    (function() {
+        'use strict';
+        
         const API_ENDPOINTS = {
             user: 'https://nbykanov13.app.n8n.cloud/webhook/ec48838c-e168-4f0e-bf66-054d59e0275a/api/user',
             tasks: 'https://nbykanov13.app.n8n.cloud/webhook/2fd6cb69-88fa-4d08-aba2-221247b6652b/api/tasks',
@@ -484,40 +477,25 @@
             toggleTask: 'https://nbykanov13.app.n8n.cloud/webhook/a3911d71-ce2f-4e9c-a05d-f35f1c4779c8/api/tasks'
         };
         
-        // Telegram WebApp API
         let tg = null;
         let telegramUserId = null;
         
-        // Инициализация Telegram WebApp
         if (window.Telegram && window.Telegram.WebApp) {
             tg = window.Telegram.WebApp;
             tg.ready();
             tg.expand();
             
-            // Применяем тему
-            document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#ffffff');
-            document.documentElement.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color || '#000000');
-            document.documentElement.style.setProperty('--tg-theme-hint-color', tg.themeParams.hint_color || '#8e8e93');
-            document.documentElement.style.setProperty('--tg-theme-link-color', tg.themeParams.link_color || '#007aff');
-            document.documentElement.style.setProperty('--tg-theme-button-color', tg.themeParams.button_color || '#007aff');
-            document.documentElement.style.setProperty('--tg-theme-button-text-color', tg.themeParams.button_text_color || '#ffffff');
-            document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', tg.themeParams.secondary_bg_color || '#f2f2f7');
-            
             if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
                 telegramUserId = tg.initDataUnsafe.user.id;
-                console.log('Telegram user ID:', telegramUserId);
             }
         }
         
-        // Для тестирования
         if (!telegramUserId) {
             const urlParams = new URLSearchParams(window.location.search);
             const testUserId = urlParams.get('user_id');
             telegramUserId = testUserId ? parseInt(testUserId) : 123456789;
-            console.log('Using test user ID:', telegramUserId);
         }
 
-        // App State
         let currentDate = new Date();
         let selectedDate = new Date();
         let calendarData = {};
@@ -529,7 +507,6 @@
         };
         let currentTasks = [];
 
-        // Показать сообщение об успехе
         function showSuccess(message) {
             const successDiv = document.createElement('div');
             successDiv.className = 'success-message';
@@ -539,7 +516,6 @@
             setTimeout(() => successDiv.remove(), 3000);
         }
 
-        // Показать ошибку
         function showError(message) {
             const errorDiv = document.createElement('div');
             errorDiv.className = 'error-message';
@@ -549,15 +525,10 @@
             setTimeout(() => errorDiv.remove(), 5000);
         }
 
-        // API функции
         async function apiRequest(url, options = {}) {
             try {
-                console.log(`API Request: ${options.method || 'GET'} ${url}`);
-                if (options.body) console.log('Request body:', options.body);
-                
-                // Добавляем таймаут для запросов
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 секунд таймаут
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
                 
                 const response = await fetch(url, {
                     headers: {
@@ -570,46 +541,24 @@
                 
                 clearTimeout(timeoutId);
                 
-                console.log(`Response status: ${response.status}`);
-                
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Response error text:', errorText);
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
                 const text = await response.text();
-                console.log('Response text:', text);
-                
-                try {
-                    const data = JSON.parse(text);
-                    console.log('Parsed response data:', data);
-                    return data;
-                } catch (e) {
-                    console.error('JSON parse error:', e);
-                    console.error('Invalid JSON:', text);
-                    throw new Error('Invalid JSON response');
-                }
+                const data = JSON.parse(text);
+                return data;
             } catch (error) {
                 if (error.name === 'AbortError') {
-                    console.error('Request timeout');
                     throw new Error('Запрос превысил время ожидания');
                 }
-                console.error('API Error:', error);
                 throw error;
             }
         }
 
-        // Загрузка данных пользователя
         async function loadUserData() {
             try {
-                console.log('loadUserData: Starting request');
-                const url = `${API_ENDPOINTS.user}/${telegramUserId}`;
-                console.log('loadUserData: URL:', url);
-                
-                const userData = await apiRequest(url);
-                
-                console.log('loadUserData: Raw response:', userData);
+                const userData = await apiRequest(`${API_ENDPOINTS.user}/${telegramUserId}`);
                 
                 if (userData && userData.length > 0) {
                     const user = userData[0];
@@ -620,29 +569,20 @@
                         streak: user.current_streak || 0
                     };
                     
-                    console.log('loadUserData: Parsed user info:', userInfo);
-                    
-                    // Обновляем UI
                     document.getElementById('userName').textContent = userInfo.name;
                     document.getElementById('userRank').textContent = userInfo.rank;
                     document.getElementById('userPoints').textContent = userInfo.points;
                     document.getElementById('userStreak').textContent = userInfo.streak;
                     document.getElementById('userAvatar').textContent = userInfo.name[0].toUpperCase();
-                } else {
-                    console.warn('loadUserData: No user data found');
-                    throw new Error('Пользователь не найден');
                 }
             } catch (error) {
-                console.error('loadUserData: Error:', error);
-                // Показываем дефолтные данные
+                console.error('Error loading user data:', error);
                 document.getElementById('userName').textContent = 'Гость';
                 document.getElementById('userRank').textContent = 'Новичок';
                 document.getElementById('userAvatar').textContent = 'Г';
-                throw error; // Пробрасываем ошибку дальше
             }
         }
 
-        // Загрузка данных календаря
         async function loadCalendarData() {
             try {
                 const year = currentDate.getFullYear();
@@ -668,44 +608,25 @@
             }
         }
 
-        // Загрузка задач
         async function loadTasks() {
             try {
                 const dateStr = formatDateKey(selectedDate);
-                console.log('loadTasks: Loading for date:', dateStr);
-                
                 const response = await apiRequest(`${API_ENDPOINTS.tasks}/${telegramUserId}/${dateStr}`);
-                console.log('loadTasks: Raw response:', response);
-                console.log('loadTasks: Response type:', typeof response);
-                console.log('loadTasks: Is array?', Array.isArray(response));
                 
-                // Преобразуем ответ в массив
                 let allTasks = [];
                 
                 if (Array.isArray(response)) {
-                    // Если это уже массив
                     allTasks = response;
                 } else if (response && typeof response === 'object') {
-                    // Если это объект, проверяем есть ли в нем массив данных
                     if (response.data && Array.isArray(response.data)) {
                         allTasks = response.data;
                     } else if (response.tasks && Array.isArray(response.tasks)) {
                         allTasks = response.tasks;
                     } else if (response.id) {
-                        // Если это одна задача, оборачиваем в массив
                         allTasks = [response];
-                    } else {
-                        // Если структура неизвестна, пробуем получить все значения объекта
-                        allTasks = Object.values(response).filter(item => 
-                            item && typeof item === 'object' && item.id
-                        );
                     }
                 }
                 
-                console.log('loadTasks: Converted to array:', allTasks);
-                console.log('loadTasks: Array length:', allTasks.length);
-                
-                // Фильтруем задачи по выбранной дате
                 currentTasks = allTasks.filter(task => {
                     if (!task || typeof task !== 'object') return false;
                     
@@ -716,19 +637,16 @@
                     return taskDate === dateStr;
                 });
                 
-                console.log('loadTasks: Filtered tasks:', currentTasks);
                 renderTasks(currentTasks);
                 
             } catch (error) {
                 console.error('Error loading tasks:', error);
-                console.error('Error stack:', error.stack);
                 currentTasks = [];
                 renderTasks([]);
             }
         }
 
-        // Переключение статуса задачи
-        async function toggleTaskStatus(taskId) {
+        window.toggleTaskStatus = async function(taskId) {
             try {
                 const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
                 const checkbox = taskCard.querySelector('.checkbox');
@@ -737,7 +655,6 @@
                 
                 if (!task) return;
                 
-                // Оптимистичное обновление UI
                 const wasCompleted = task.status === 'completed';
                 
                 if (wasCompleted) {
@@ -752,16 +669,12 @@
                     task.status = 'completed';
                 }
                 
-                // Haptic feedback (только для поддерживаемых версий)
                 if (tg && tg.HapticFeedback && typeof tg.HapticFeedback.impactOccurred === 'function') {
                     try {
                         tg.HapticFeedback.impactOccurred('light');
-                    } catch (e) {
-                        console.log('HapticFeedback not available');
-                    }
+                    } catch (e) {}
                 }
                 
-                // Отправляем на сервер
                 try {
                     await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle`, {
                         method: 'POST',
@@ -771,13 +684,10 @@
                         })
                     });
                     
-                    // Показываем сообщение об успехе
-                    showSuccess(wasCompleted ? 'Задача возвращена в работу' : 'Задача выполнена! +очки 🎉');
+                    showSuccess(wasCompleted ? 'Задача возвращена в работу' : 'Задача выполнена!');
                     
-                    // Обновляем календарь
                     setTimeout(loadCalendarData, 500);
                     
-                    // Обновляем данные пользователя для обновления очков
                     if (!wasCompleted) {
                         setTimeout(loadUserData, 1000);
                     }
@@ -785,7 +695,6 @@
                 } catch (apiError) {
                     console.error('Toggle API error:', apiError);
                     
-                    // Откатываем изменения
                     if (wasCompleted) {
                         checkbox.classList.add('checked');
                         taskCard.classList.add('completed');
@@ -805,9 +714,8 @@
                 console.error('Error in toggleTaskStatus:', error);
                 showError('Произошла ошибка');
             }
-        }
+        };
 
-        // Форматирование даты
         function formatDateKey(date) {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -815,17 +723,25 @@
             return `${year}-${month}-${day}`;
         }
 
-        // Рендеринг календаря
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
         function renderCalendar() {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
             
-            // Обновляем заголовок месяца
             const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
                               'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
             document.getElementById('monthTitle').textContent = `${monthNames[month]} ${year}`;
             
-            // Получаем дни месяца
             const firstDay = new Date(year, month, 1);
             const lastDay = new Date(year, month + 1, 0);
             const prevLastDay = new Date(year, month, 0);
@@ -834,19 +750,16 @@
             
             let html = '';
             
-            // Дни недели
             const weekDays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
             weekDays.forEach(day => {
                 html += `<div class="weekday-label">${day}</div>`;
             });
             
-            // Дни предыдущего месяца
             for (let i = startingDayOfWeek - 1; i >= 0; i--) {
                 const day = prevLastDay.getDate() - i;
                 html += `<div class="calendar-day other-month"><span class="day-number">${day}</span></div>`;
             }
             
-            // Дни текущего месяца
             const today = new Date();
             for (let day = 1; day <= daysInMonth; day++) {
                 const date = new Date(year, month, day);
@@ -875,7 +788,6 @@
                 html += '</div>';
             }
             
-            // Дни следующего месяца
             const remainingDays = 42 - (startingDayOfWeek + daysInMonth);
             for (let day = 1; day <= remainingDays; day++) {
                 html += `<div class="calendar-day other-month"><span class="day-number">${day}</span></div>`;
@@ -884,11 +796,9 @@
             document.getElementById('calendar').innerHTML = html;
         }
 
-        // Рендеринг задач
         function renderTasks(tasks) {
             const container = document.getElementById('tasksList');
             
-            // Обновляем заголовок
             const options = { weekday: 'long', day: 'numeric', month: 'long' };
             document.getElementById('tasksHeader').textContent = 
                 selectedDate.toLocaleDateString('ru-RU', options);
@@ -919,13 +829,15 @@
                     });
                 }
                 
+                const safeTitle = escapeHtml(task.title || '');
+                
                 html += `
                     <div class="task-card ${isCompleted ? 'completed' : ''}" data-task-id="${task.id}">
                         <div class="checkbox ${isCompleted ? 'checked' : ''}" 
                              onclick="toggleTaskStatus(${task.id})">
                         </div>
                         <div class="task-info">
-                            <div class="task-title ${isCompleted ? 'completed' : ''}">${task.title}</div>
+                            <div class="task-title ${isCompleted ? 'completed' : ''}">${safeTitle}</div>
                             <div class="task-meta">
                                 ${deadlineText ? `<span>⏰ ${deadlineText}</span>` : ''}
                                 <span class="priority-badge priority-${task.priority}">${priorityText}</span>
@@ -939,55 +851,44 @@
             container.innerHTML = html;
         }
 
-        // Изменение месяца
-        async function changeMonth(direction) {
+        window.changeMonth = async function(direction) {
             currentDate.setMonth(currentDate.getMonth() + direction);
             await loadCalendarData();
             if (tg && tg.HapticFeedback && typeof tg.HapticFeedback.impactOccurred === 'function') {
                 try {
                     tg.HapticFeedback.impactOccurred('light');
-                } catch (e) {
-                    console.log('HapticFeedback not available');
-                }
+                } catch (e) {}
             }
-        }
+        };
 
-        // Выбор даты
-        async function selectDate(year, month, day) {
+        window.selectDate = async function(year, month, day) {
             selectedDate = new Date(year, month, day);
             renderCalendar();
             await loadTasks();
             if (tg && tg.HapticFeedback && typeof tg.HapticFeedback.selectionChanged === 'function') {
                 try {
                     tg.HapticFeedback.selectionChanged();
-                } catch (e) {
-                    console.log('HapticFeedback not available');
-                }
+                } catch (e) {}
             }
-        }
+        };
 
-        // Добавление новой задачи
-        function addNewTask() {
+        window.addNewTask = function() {
             if (tg && tg.HapticFeedback && typeof tg.HapticFeedback.impactOccurred === 'function') {
                 try {
                     tg.HapticFeedback.impactOccurred('medium');
-                } catch (e) {
-                    console.log('HapticFeedback not available');
-                }
+                } catch (e) {}
             }
             
             if (tg) {
-                // Закрываем WebApp и отправляем данные боту
                 const dateStr = formatDateKey(selectedDate);
                 tg.sendData(`add_task_${dateStr}`);
                 tg.close();
             } else {
                 alert('Добавление задач доступно только в Telegram');
             }
-        }
+        };
 
-        // Обновление данных
-        async function refreshData() {
+        window.refreshData = async function() {
             const refreshBtn = document.getElementById('refreshBtn');
             refreshBtn.classList.add('spinning');
             
@@ -1004,23 +905,17 @@
                 refreshBtn.classList.remove('spinning');
             }
             
-            if (tg && tg.HapticFeedback) {
-                tg.HapticFeedback.impactOccurred('light');
+            if (tg && tg.HapticFeedback && typeof tg.HapticFeedback.impactOccurred === 'function') {
+                try {
+                    tg.HapticFeedback.impactOccurred('light');
+                } catch (e) {}
             }
-        }
+        };
 
-        // Инициализация приложения
         async function init() {
             try {
-                console.log('=== APP INITIALIZATION START ===');
-                console.log('Telegram user ID:', telegramUserId);
-                console.log('Current date:', currentDate);
-                console.log('Selected date:', selectedDate);
-                
-                // Рендерим пустой календарь сразу
                 renderCalendar();
                 
-                // Убираем спиннер и показываем пустое состояние
                 const container = document.getElementById('tasksList');
                 container.innerHTML = `
                     <div class="empty-state">
@@ -1029,40 +924,14 @@
                     </div>
                 `;
                 
-                // Загружаем данные последовательно для лучшей отладки
-                console.log('Loading user data...');
-                try {
-                    await loadUserData();
-                    console.log('✓ User data loaded');
-                } catch (error) {
-                    console.error('✗ User data failed:', error);
-                }
-                
-                console.log('Loading calendar data...');
-                try {
-                    await loadCalendarData();
-                    console.log('✓ Calendar data loaded');
-                } catch (error) {
-                    console.error('✗ Calendar data failed:', error);
-                }
-                
-                console.log('Loading tasks...');
-                try {
-                    await loadTasks();
-                    console.log('✓ Tasks loaded');
-                } catch (error) {
-                    console.error('✗ Tasks failed:', error);
-                    // Показываем пустое состояние даже при ошибке
-                    renderTasks([]);
-                }
-                
-                console.log('=== APP INITIALIZATION COMPLETE ===');
+                await loadUserData();
+                await loadCalendarData();
+                await loadTasks();
                 
             } catch (error) {
                 console.error('Critical initialization error:', error);
                 showError('Ошибка при загрузке данных');
                 
-                // Показываем пустое состояние
                 const container = document.getElementById('tasksList');
                 container.innerHTML = `
                     <div class="empty-state">
@@ -1074,64 +943,12 @@
             }
         }
 
-        // Проверка соединения
-        async function checkConnection() {
-            console.log('=== CONNECTION CHECK ===');
-            console.log('User ID:', telegramUserId);
-            console.log('API Endpoints:', API_ENDPOINTS);
-            
-            // Проверяем доступность API
-            try {
-                const testUrl = `${API_ENDPOINTS.user}/${telegramUserId}`;
-                console.log('Testing URL:', testUrl);
-                
-                const response = await fetch(testUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                console.log('Test response status:', response.status);
-                console.log('Test response headers:', Object.fromEntries(response.headers.entries()));
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('API Error response:', errorText);
-                }
-                
-                return response.ok;
-            } catch (error) {
-                console.error('Connection test failed:', error);
-                return false;
-            }
-        }
-
-        // Запуск приложения
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', async () => {
-                // Сначала проверяем соединение
-                const isConnected = await checkConnection();
-                console.log('Connection status:', isConnected);
-                
-                if (!isConnected) {
-                    showError('Не удается подключиться к серверу');
-                }
-                
-                // Инициализируем приложение в любом случае
-                init();
-            });
+            document.addEventListener('DOMContentLoaded', init);
         } else {
-            checkConnection().then(isConnected => {
-                console.log('Connection status:', isConnected);
-                if (!isConnected) {
-                    showError('Не удается подключиться к серверу');
-                }
-                init();
-            });
+            init();
         }
 
-        // Обработка событий Telegram
         if (tg) {
             tg.onEvent('themeChanged', function() {
                 document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#ffffff');
@@ -1143,6 +960,7 @@
                 document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', tg.themeParams.secondary_bg_color || '#f2f2f7');
             });
         }
+    })();
     </script>
 </body>
 </html>
