@@ -548,13 +548,23 @@
                 console.log('Calendar data received:', data);
                 
                 calendarData = {};
-                if (data && Array.isArray(data)) {
-                    data.forEach(day => {
-                        calendarData[day.date] = {
-                            total: day.total_tasks,
-                            completed: day.completed_tasks
+                if (data) {
+                    // Если данные приходят как один объект, а не массив
+                    if (Array.isArray(data)) {
+                        data.forEach(day => {
+                            calendarData[day.date] = {
+                                total: parseInt(day.total_tasks) || 0,
+                                completed: parseInt(day.completed_tasks) || 0
+                            };
+                        });
+                    } else if (data.date) {
+                        // Если это один объект с датой
+                        const dateKey = formatDateKey(new Date(data.date));
+                        calendarData[dateKey] = {
+                            total: parseInt(data.total_tasks) || 0,
+                            completed: parseInt(data.completed_tasks) || 0
                         };
-                    });
+                    }
                 }
                 
                 console.log('Processed calendar data:', calendarData);
