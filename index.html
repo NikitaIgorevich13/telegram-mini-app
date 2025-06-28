@@ -268,10 +268,7 @@
             color: #000;
             margin-bottom: 6px;
             line-height: 1.3;
-        }
-
-        .task-card.completed .task-title {
-            text-decoration: line-through;
+            transition: text-decoration 0.2s;
         }
 
         .task-meta {
@@ -583,24 +580,71 @@
 
         async function toggleTaskStatus(taskId) {
             try {
-                console.log('Toggling task:', taskId);
+                console.log('Toggle task:', taskId);
                 
+                // Находим элементы задачи
+                const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+                if (!taskCard) {
+                    console.error('Task card not found for ID:', taskId);
+                    return;
+                }
+                
+                const checkbox = taskCard.querySelector('.checkbox');
+                const taskTitle = taskCard.querySelector('.task-title');
+                const isCurrentlyCompleted = checkbox.classList.contains('checked');
+                
+                // Мгновенно обновляем UI для лучшего UX
+                if (isCurrentlyCompleted) {
+                    // Снимаем отметку
+                    checkbox.classList.remove('checked');
+                    taskCard.classList.remove('completed');
+                    taskTitle.style.textDecoration = 'none';
+                } else {
+                    // Ставим отметку
+                    checkbox.classList.add('checked');
+                    taskCard.classList.add('completed');
+                    taskTitle.style.textDecoration = 'line-through';
+                }
+                
+                // Отправляем запрос к API
                 const response = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle`, {
                     method: 'POST'
                 });
                 
                 console.log('Toggle response:', response);
                 
-                // Перезагружаем задачи и календарь
-                await loadTasks();
-                await loadCalendarData();
+                // Перезагружаем данные для синхронизации
+                setTimeout(async () => {
+                    await loadTasks();
+                    await loadCalendarData();
+                }, 500); // Небольшая задержка чтобы пользователь увидел мгновенный отклик
                 
                 if (tg && tg.HapticFeedback) {
                     tg.HapticFeedback.impactOccurred('light');
                 }
+                
             } catch (error) {
                 console.error('Error toggling task:', error);
-                showError('Ошибка при изменении статуса задачи');
+                
+                // В случае ошибки возвращаем UI к исходному состоянию
+                const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+                if (taskCard) {
+                    const checkbox = taskCard.querySelector('.checkbox');
+                    const taskTitle = taskCard.querySelector('.task-title');
+                    
+                    // Откатываем изменения
+                    if (checkbox.classList.contains('checked')) {
+                        checkbox.classList.remove('checked');
+                        taskCard.classList.remove('completed');
+                        taskTitle.style.textDecoration = 'none';
+                    } else {
+                        checkbox.classList.add('checked');
+                        taskCard.classList.add('completed');
+                        taskTitle.style.textDecoration = 'line-through';
+                    }
+                }
+                
+                showError('Ошибка при обновлении задачи');
             }
         }
 
@@ -764,11 +808,11 @@
                 }
                 
                 html += `
-                    <div class="task-card ${isCompleted ? 'completed' : ''}">
+                    <div class="task-card ${isCompleted ? 'completed' : ''}" data-task-id="${task.id}">
                         <div class="checkbox ${isCompleted ? 'checked' : ''}" 
-                             onclick="toggleTaskStatus('${task.id}')"></div>
+                             onclick="toggleTaskStatus(${task.id})"></div>
                         <div class="task-info">
-                            <div class="task-title">${task.title}</div>
+                            <div class="task-title" style="text-decoration: ${isCompleted ? 'line-through' : 'none'}">${task.title}</div>
                             <div class="task-meta">
                                 ${deadlineText ? `<span>⏰ ${deadlineText}</span>` : ''}
                                 <span class="priority-badge priority-${task.priority}">${priorityText}</span>
