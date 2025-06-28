@@ -636,16 +636,63 @@
                 console.log('Sending API request to:', `${API_ENDPOINTS.toggleTask}/${taskId}/toggle`);
                 
                 try {
-                    const response = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle`, {
-                        method: 'POST'
-                    });
+                    // Пробуем разные варианты API запроса
+                    let response;
+                    
+                    // Вариант 1: POST с пустым телом
+                    try {
+                        response = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle`, {
+                            method: 'POST'
+                        });
+                        showDebugMessage('✅ Вариант 1 (POST пустой): ' + JSON.stringify(response), 'info');
+                    } catch (e) {
+                        showDebugMessage('❌ Вариант 1 failed: ' + e.message, 'error');
+                        
+                        // Вариант 2: POST с данными в теле
+                        try {
+                            response = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle`, {
+                                method: 'POST',
+                                body: JSON.stringify({
+                                    task_id: taskId,
+                                    action: 'toggle'
+                                })
+                            });
+                            showDebugMessage('✅ Вариант 2 (POST с данными): ' + JSON.stringify(response), 'info');
+                        } catch (e2) {
+                            showDebugMessage('❌ Вариант 2 failed: ' + e2.message, 'error');
+                            
+                            // Вариант 3: PUT запрос
+                            try {
+                                response = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle`, {
+                                    method: 'PUT'
+                                });
+                                showDebugMessage('✅ Вариант 3 (PUT): ' + JSON.stringify(response), 'info');
+                            } catch (e3) {
+                                showDebugMessage('❌ Вариант 3 failed: ' + e3.message, 'error');
+                                
+                                // Вариант 4: PATCH запрос
+                                try {
+                                    response = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}`, {
+                                        method: 'PATCH',
+                                        body: JSON.stringify({
+                                            status: isCurrentlyCompleted ? 'pending' : 'completed'
+                                        })
+                                    });
+                                    showDebugMessage('✅ Вариант 4 (PATCH): ' + JSON.stringify(response), 'info');
+                                } catch (e4) {
+                                    showDebugMessage('❌ Все варианты failed!', 'error');
+                                    throw e4;
+                                }
+                            }
+                        }
+                    }
                     
                     console.log('Toggle API response:', response);
                     
                     // Проверяем что API вернул
-                    if (response && response.success) {
-                        console.log('✅ API confirmed toggle success');
-                        showDebugMessage('✅ API подтвердил изменение', 'success');
+                    if (response && (response.success || response.id || response.status)) {
+                        console.log('✅ API response looks good');
+                        showDebugMessage('✅ API ответил успешно', 'success');
                     } else {
                         console.warn('⚠️ API response unclear:', response);
                         showDebugMessage('⚠️ Неясный ответ API: ' + JSON.stringify(response), 'error');
