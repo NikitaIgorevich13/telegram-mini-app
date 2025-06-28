@@ -578,73 +578,76 @@
             }
         }
 
-        async function toggleTaskStatus(taskId) {
+        function toggleTaskStatus(taskId) {
+            console.log('=== TOGGLE CLICKED ===');
+            console.log('Task ID:', taskId, typeof taskId);
+            
+            // Простая проверка работает ли клик вообще
+            alert(`Клик на задачу ${taskId}!`);
+            
             try {
-                console.log('Toggle task:', taskId);
+                // Ищем элементы разными способами
+                console.log('Searching for task card...');
                 
-                // Находим элементы задачи
-                const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+                const taskCard1 = document.querySelector(`[data-task-id="${taskId}"]`);
+                const taskCard2 = document.querySelector(`[data-task-id='${taskId}']`);
+                const allTaskCards = document.querySelectorAll('[data-task-id]');
+                
+                console.log('Method 1 result:', taskCard1);
+                console.log('Method 2 result:', taskCard2);
+                console.log('All task cards:', allTaskCards);
+                
+                allTaskCards.forEach((card, index) => {
+                    console.log(`Card ${index}:`, card.getAttribute('data-task-id'));
+                });
+                
+                const taskCard = taskCard1 || taskCard2;
+                
                 if (!taskCard) {
-                    console.error('Task card not found for ID:', taskId);
+                    console.error('❌ Task card not found for ID:', taskId);
+                    alert(`Карточка задачи не найдена для ID: ${taskId}`);
                     return;
                 }
                 
+                console.log('✅ Task card found:', taskCard);
+                
                 const checkbox = taskCard.querySelector('.checkbox');
                 const taskTitle = taskCard.querySelector('.task-title');
-                const isCurrentlyCompleted = checkbox.classList.contains('checked');
                 
-                // Мгновенно обновляем UI для лучшего UX
+                if (!checkbox || !taskTitle) {
+                    console.error('❌ Checkbox or title not found');
+                    alert('Элементы задачи не найдены');
+                    return;
+                }
+                
+                console.log('✅ Elements found:', { checkbox, taskTitle });
+                
+                const isCurrentlyCompleted = checkbox.classList.contains('checked');
+                console.log('Current status:', isCurrentlyCompleted ? 'completed' : 'not completed');
+                
+                // Простое переключение
                 if (isCurrentlyCompleted) {
-                    // Снимаем отметку
+                    console.log('Removing completed state...');
                     checkbox.classList.remove('checked');
                     taskCard.classList.remove('completed');
                     taskTitle.style.textDecoration = 'none';
+                    alert('Задача снята с выполнения!');
                 } else {
-                    // Ставим отметку
+                    console.log('Adding completed state...');
                     checkbox.classList.add('checked');
                     taskCard.classList.add('completed');
                     taskTitle.style.textDecoration = 'line-through';
+                    alert('Задача выполнена!');
                 }
                 
-                // Отправляем запрос к API
-                const response = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle`, {
-                    method: 'POST'
-                });
+                console.log('✅ UI updated successfully');
                 
-                console.log('Toggle response:', response);
-                
-                // Перезагружаем данные для синхронизации
-                setTimeout(async () => {
-                    await loadTasks();
-                    await loadCalendarData();
-                }, 500); // Небольшая задержка чтобы пользователь увидел мгновенный отклик
-                
-                if (tg && tg.HapticFeedback) {
-                    tg.HapticFeedback.impactOccurred('light');
-                }
+                // Пока отключим API запрос для диагностики
+                console.log('API call disabled for debugging');
                 
             } catch (error) {
-                console.error('Error toggling task:', error);
-                
-                // В случае ошибки возвращаем UI к исходному состоянию
-                const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
-                if (taskCard) {
-                    const checkbox = taskCard.querySelector('.checkbox');
-                    const taskTitle = taskCard.querySelector('.task-title');
-                    
-                    // Откатываем изменения
-                    if (checkbox.classList.contains('checked')) {
-                        checkbox.classList.remove('checked');
-                        taskCard.classList.remove('completed');
-                        taskTitle.style.textDecoration = 'none';
-                    } else {
-                        checkbox.classList.add('checked');
-                        taskCard.classList.add('completed');
-                        taskTitle.style.textDecoration = 'line-through';
-                    }
-                }
-                
-                showError('Ошибка при обновлении задачи');
+                console.error('❌ Error in toggle:', error);
+                alert(`Ошибка: ${error.message}`);
             }
         }
 
@@ -807,10 +810,14 @@
                     });
                 }
                 
+                console.log(`Rendering task ${task.id}, completed: ${isCompleted}`);
+                
                 html += `
                     <div class="task-card ${isCompleted ? 'completed' : ''}" data-task-id="${task.id}">
                         <div class="checkbox ${isCompleted ? 'checked' : ''}" 
-                             onclick="toggleTaskStatus(${task.id})"></div>
+                             onclick="console.log('Checkbox clicked for task ${task.id}'); toggleTaskStatus('${task.id}');" 
+                             style="cursor: pointer; background-color: ${isCompleted ? '#007aff' : 'transparent'};">
+                        </div>
                         <div class="task-info">
                             <div class="task-title" style="text-decoration: ${isCompleted ? 'line-through' : 'none'}">${task.title}</div>
                             <div class="task-meta">
@@ -823,7 +830,19 @@
                 `;
             });
             
+            console.log('Generated HTML:', html);
             container.innerHTML = html;
+            
+            // Дополнительная проверка после рендеринга
+            setTimeout(() => {
+                const renderedCards = document.querySelectorAll('[data-task-id]');
+                console.log('Rendered task cards count:', renderedCards.length);
+                renderedCards.forEach(card => {
+                    const id = card.getAttribute('data-task-id');
+                    const checkbox = card.querySelector('.checkbox');
+                    console.log(`Card ${id}: checkbox found = ${!!checkbox}`);
+                });
+            }, 100);
         }
 
         function addNewTask() {
