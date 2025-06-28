@@ -449,18 +449,60 @@
             console.log('Telegram initDataUnsafe:', tg.initDataUnsafe);
             if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
                 telegramUserId = tg.initDataUnsafe.user.id;
-                console.log('Telegram user ID from WebApp:', telegramUserId);
+                console.log('✅ Real Telegram user ID:', telegramUserId);
+                console.log('User info:', tg.initDataUnsafe.user);
             } else {
-                console.warn('No user data in initDataUnsafe');
+                console.warn('No user data in initDataUnsafe, checking initData...');
+                
+                // Пробуем получить данные из initData
+                if (tg.initData) {
+                    console.log('InitData available:', tg.initData);
+                    // Здесь можно добавить парсинг initData если нужно
+                }
             }
         } else {
-            console.warn('Telegram WebApp not available');
+            console.warn('Telegram WebApp not available - running in browser');
         }
         
-        // Для тестирования в браузере
+        // Для разработки и тестирования
         if (!telegramUserId) {
-            console.log('Using fallback user ID for testing');
-            telegramUserId = 123456789;
+            console.log('🔧 No real user ID found');
+            
+            // Проверяем URL параметры для тестирования
+            const urlParams = new URLSearchParams(window.location.search);
+            const testUserId = urlParams.get('user_id');
+            
+            if (testUserId) {
+                telegramUserId = parseInt(testUserId);
+                console.log('📝 Using test user ID from URL:', telegramUserId);
+            } else {
+                // Фоллбэк для разработки
+                telegramUserId = 123456789;
+                console.log('⚠️ Using fallback test user ID:', telegramUserId);
+                
+                // Показываем предупреждение
+                setTimeout(() => {
+                    if (document.body) {
+                        const warningDiv = document.createElement('div');
+                        warningDiv.style.cssText = `
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            background: #ff9500;
+                            color: white;
+                            padding: 8px 16px;
+                            text-align: center;
+                            font-size: 14px;
+                            z-index: 10000;
+                        `;
+                        warningDiv.textContent = '⚠️ Режим разработки - используется тестовый пользователь';
+                        document.body.appendChild(warningDiv);
+                        
+                        setTimeout(() => warningDiv.remove(), 5000);
+                    }
+                }, 1000);
+            }
         }
         
         console.log('Final telegram user ID:', telegramUserId);
