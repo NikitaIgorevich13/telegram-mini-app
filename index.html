@@ -583,9 +583,13 @@
 
         async function toggleTaskStatus(taskId) {
             try {
-                await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle`, {
+                console.log('Toggling task:', taskId);
+                
+                const response = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle`, {
                     method: 'POST'
                 });
+                
+                console.log('Toggle response:', response);
                 
                 // Перезагружаем задачи и календарь
                 await loadTasks();
@@ -596,6 +600,7 @@
                 }
             } catch (error) {
                 console.error('Error toggling task:', error);
+                showError('Ошибка при изменении статуса задачи');
             }
         }
 
@@ -761,7 +766,7 @@
                 html += `
                     <div class="task-card ${isCompleted ? 'completed' : ''}">
                         <div class="checkbox ${isCompleted ? 'checked' : ''}" 
-                             onclick="toggleTaskStatus(${task.id})"></div>
+                             onclick="toggleTaskStatus('${task.id}')"></div>
                         <div class="task-info">
                             <div class="task-title">${task.title}</div>
                             <div class="task-meta">
