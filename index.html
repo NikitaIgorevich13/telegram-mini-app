@@ -430,6 +430,9 @@
             toggleTask: 'https://nbykanov13.app.n8n.cloud/webhook/a3911d71-ce2f-4e9c-a05d-f35f1c4779c8/api/tasks'
         };
         
+        console.log('=== API CONFIGURATION ===');
+        console.log('API Endpoints:', API_ENDPOINTS);
+        
         // Telegram WebApp API
         let tg = null;
         let telegramUserId = null;
@@ -621,11 +624,18 @@
                     tg.HapticFeedback.impactOccurred('light');
                 }
                 
-                // Пытаемся отправить в API (в фоне, без показа пользователю)
+                // Пытаемся отправить в API (в фоне, с подробным логированием)
                 try {
                     const newStatus = isCurrentlyCompleted ? 'pending' : 'completed';
                     
-                    // Пробуем несколько вариантов API в фоне
+                    console.log('=== TOGGLE API ATTEMPT ===');
+                    console.log('Task ID:', taskId);
+                    console.log('Current status:', isCurrentlyCompleted ? 'completed' : 'pending');
+                    console.log('New status:', newStatus);
+                    console.log('Toggle URL:', `${API_ENDPOINTS.toggleTask}/${taskId}/toggle`);
+                    console.log('User ID:', telegramUserId);
+                    
+                    // Пробуем оригинальный toggle endpoint
                     const response = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle`, {
                         method: 'POST',
                         body: JSON.stringify({
@@ -635,10 +645,54 @@
                         })
                     });
                     
-                    // Если API сработал - отлично, если нет - не показываем ошибку пользователю
+                    console.log('✅ Toggle API SUCCESS:', response);
+                    
                 } catch (apiError) {
-                    // API не работает - оставляем только визуальные изменения
-                    console.log('Toggle API not available, visual-only mode');
+                    console.log('❌ Toggle API FAILED:', apiError.message);
+                    console.log('Error details:', apiError);
+                    
+                    // Пробуем альтернативные варианты
+                    console.log('Trying alternative methods...');
+                    
+                    // Вариант 1: Без /toggle в URL
+                    try {
+                        const alt1 = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}`, {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                action: 'toggle',
+                                status: newStatus,
+                                user_id: telegramUserId
+                            })
+                        });
+                        console.log('✅ Alternative 1 SUCCESS:', alt1);
+                    } catch (e1) {
+                        console.log('❌ Alternative 1 failed:', e1.message);
+                        
+                        // Вариант 2: GET метод
+                        try {
+                            const alt2 = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle?user_id=${telegramUserId}&status=${newStatus}`, {
+                                method: 'GET'
+                            });
+                            console.log('✅ Alternative 2 SUCCESS:', alt2);
+                        } catch (e2) {
+                            console.log('❌ Alternative 2 failed:', e2.message);
+                            
+                            // Вариант 3: PUT метод
+                            try {
+                                const alt3 = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle`, {
+                                    method: 'PUT',
+                                    body: JSON.stringify({
+                                        task_id: parseInt(taskId),
+                                        completed: !isCurrentlyCompleted
+                                    })
+                                });
+                                console.log('✅ Alternative 3 SUCCESS:', alt3);
+                            } catch (e3) {
+                                console.log('❌ All toggle attempts failed');
+                                console.log('Current API_ENDPOINTS:', API_ENDPOINTS);
+                            }
+                        }
+                    }
                 }
                 
                 // Обновляем календарь в фоне
