@@ -582,76 +582,91 @@
             }
         }
 
-        function toggleTaskStatus(taskId) {
-            console.log('=== TOGGLE CLICKED ===');
-            console.log('Task ID:', taskId, typeof taskId);
-            
-            // Простая проверка работает ли клик вообще
-            alert(`Клик на задачу ${taskId}!`);
-            
+        async function toggleTaskStatus(taskId) {
             try {
-                // Ищем элементы разными способами
-                console.log('Searching for task card...');
+                console.log('=== TOGGLE TASK ===');
+                console.log('Task ID:', taskId);
                 
-                const taskCard1 = document.querySelector(`[data-task-id="${taskId}"]`);
-                const taskCard2 = document.querySelector(`[data-task-id='${taskId}']`);
-                const allTaskCards = document.querySelectorAll('[data-task-id]');
-                
-                console.log('Method 1 result:', taskCard1);
-                console.log('Method 2 result:', taskCard2);
-                console.log('All task cards:', allTaskCards);
-                
-                allTaskCards.forEach((card, index) => {
-                    console.log(`Card ${index}:`, card.getAttribute('data-task-id'));
-                });
-                
-                const taskCard = taskCard1 || taskCard2;
-                
+                // Находим элементы задачи
+                const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
                 if (!taskCard) {
-                    console.error('❌ Task card not found for ID:', taskId);
-                    alert(`Карточка задачи не найдена для ID: ${taskId}`);
+                    console.error('Task card not found for ID:', taskId);
                     return;
                 }
-                
-                console.log('✅ Task card found:', taskCard);
                 
                 const checkbox = taskCard.querySelector('.checkbox');
                 const taskTitle = taskCard.querySelector('.task-title');
                 
                 if (!checkbox || !taskTitle) {
-                    console.error('❌ Checkbox or title not found');
-                    alert('Элементы задачи не найдены');
+                    console.error('Checkbox or title not found');
                     return;
                 }
                 
-                console.log('✅ Elements found:', { checkbox, taskTitle });
-                
                 const isCurrentlyCompleted = checkbox.classList.contains('checked');
-                console.log('Current status:', isCurrentlyCompleted ? 'completed' : 'not completed');
+                console.log('Current status:', isCurrentlyCompleted ? 'completed' : 'pending');
                 
-                // Простое переключение
+                // Мгновенно обновляем UI
                 if (isCurrentlyCompleted) {
-                    console.log('Removing completed state...');
+                    // Снимаем отметку
                     checkbox.classList.remove('checked');
                     taskCard.classList.remove('completed');
                     taskTitle.style.textDecoration = 'none';
-                    alert('Задача снята с выполнения!');
+                    checkbox.style.backgroundColor = 'transparent';
+                    console.log('UI updated: task unmarked');
                 } else {
-                    console.log('Adding completed state...');
+                    // Ставим отметку
                     checkbox.classList.add('checked');
                     taskCard.classList.add('completed');
                     taskTitle.style.textDecoration = 'line-through';
-                    alert('Задача выполнена!');
+                    checkbox.style.backgroundColor = '#007aff';
+                    console.log('UI updated: task marked completed');
                 }
                 
-                console.log('✅ UI updated successfully');
+                // Haptic feedback
+                if (tg && tg.HapticFeedback) {
+                    tg.HapticFeedback.impactOccurred('light');
+                }
                 
-                // Пока отключим API запрос для диагностики
-                console.log('API call disabled for debugging');
+                // Отправляем запрос к API
+                console.log('Sending API request...');
+                const response = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle`, {
+                    method: 'POST'
+                });
+                
+                console.log('Toggle API response:', response);
+                
+                // Перезагружаем данные через небольшую задержку
+                setTimeout(async () => {
+                    console.log('Reloading data...');
+                    await loadTasks();
+                    await loadCalendarData();
+                    console.log('Data reloaded');
+                }, 1000);
                 
             } catch (error) {
-                console.error('❌ Error in toggle:', error);
-                alert(`Ошибка: ${error.message}`);
+                console.error('Error toggling task:', error);
+                
+                // В случае ошибки возвращаем UI к исходному состоянию
+                const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+                if (taskCard) {
+                    const checkbox = taskCard.querySelector('.checkbox');
+                    const taskTitle = taskCard.querySelector('.task-title');
+                    
+                    // Откатываем изменения
+                    if (checkbox.classList.contains('checked')) {
+                        checkbox.classList.remove('checked');
+                        taskCard.classList.remove('completed');
+                        taskTitle.style.textDecoration = 'none';
+                        checkbox.style.backgroundColor = 'transparent';
+                    } else {
+                        checkbox.classList.add('checked');
+                        taskCard.classList.add('completed');
+                        taskTitle.style.textDecoration = 'line-through';
+                        checkbox.style.backgroundColor = '#007aff';
+                    }
+                }
+                
+                showError('Ошибка при обновлении задачи');
             }
         }
 
@@ -856,7 +871,6 @@
                         e.preventDefault();
                         e.stopPropagation();
                         console.log('CLICK detected on checkbox for task:', taskId);
-                        alert(`Clicked task ${taskId}!`);
                         toggleTaskStatus(taskId);
                     });
                     
@@ -864,7 +878,6 @@
                         e.preventDefault();
                         e.stopPropagation();
                         console.log('TOUCH detected on checkbox for task:', taskId);
-                        alert(`Touched task ${taskId}!`);
                         toggleTaskStatus(taskId);
                     });
                     
@@ -874,7 +887,6 @@
                         taskCard.addEventListener('click', function(e) {
                             if (e.target.closest('.checkbox')) return; // не дублируем если клик по checkbox
                             console.log('CARD clicked for task:', taskId);
-                            alert(`Card clicked for task ${taskId}!`);
                             toggleTaskStatus(taskId);
                         });
                     }
