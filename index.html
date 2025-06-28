@@ -628,20 +628,76 @@
                 }
                 
                 // Отправляем запрос к API
-                console.log('Sending API request...');
+                console.log('Sending API request to:', `${API_ENDPOINTS.toggleTask}/${taskId}/toggle`);
+                
                 const response = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle`, {
                     method: 'POST'
                 });
                 
                 console.log('Toggle API response:', response);
                 
-                // Перезагружаем данные через небольшую задержку
+                // Проверяем что API вернул
+                if (response && response.success) {
+                    console.log('✅ API confirmed toggle success');
+                } else {
+                    console.warn('⚠️ API response unclear:', response);
+                }
+                
+                // НЕ ПЕРЕЗАГРУЖАЕМ ДАННЫЕ СРАЗУ - дадим API время обработать
+                console.log('Waiting before data reload...');
+                
+                // Проверим состояние через 2 секунды
                 setTimeout(async () => {
-                    console.log('Reloading data...');
-                    await loadTasks();
-                    await loadCalendarData();
-                    console.log('Data reloaded');
-                }, 1000);
+                    console.log('Checking if toggle persisted...');
+                    
+                    try {
+                        // Загружаем свежие данные для проверки
+                        const dateStr = formatDateKey(selectedDate);
+                        const freshTasks = await apiRequest(`${API_ENDPOINTS.tasks}/${telegramUserId}/${dateStr}`);
+                        
+                        console.log('Fresh tasks from API:', freshTasks);
+                        
+                        const tasksArray = Array.isArray(freshTasks) ? freshTasks : (freshTasks ? [freshTasks] : []);
+                        const updatedTask = tasksArray.find(task => task.id == taskId);
+                        
+                        if (updatedTask) {
+                            console.log('Found updated task:', updatedTask);
+                            console.log('Task status in DB:', updatedTask.status);
+                            
+                            // Если статус в БД не соответствует UI - исправляем UI
+                            const shouldBeCompleted = updatedTask.status === 'completed';
+                            const currentlyShowsCompleted = checkbox.classList.contains('checked');
+                            
+                            if (shouldBeCompleted !== currentlyShowsCompleted) {
+                                console.log('⚠️ UI and DB status mismatch! Fixing UI...');
+                                console.log('DB says:', shouldBeCompleted ? 'completed' : 'pending');
+                                console.log('UI shows:', currentlyShowsCompleted ? 'completed' : 'pending');
+                                
+                                if (shouldBeCompleted) {
+                                    checkbox.classList.add('checked');
+                                    taskCard.classList.add('completed');
+                                    taskTitle.style.textDecoration = 'line-through';
+                                    checkbox.style.backgroundColor = '#007aff';
+                                } else {
+                                    checkbox.classList.remove('checked');
+                                    taskCard.classList.remove('completed');
+                                    taskTitle.style.textDecoration = 'none';
+                                    checkbox.style.backgroundColor = 'transparent';
+                                }
+                            } else {
+                                console.log('✅ UI and DB status match');
+                            }
+                        } else {
+                            console.error('❌ Task not found in fresh data');
+                        }
+                        
+                        // Обновляем календарь
+                        await loadCalendarData();
+                        
+                    } catch (error) {
+                        console.error('Error checking toggle persistence:', error);
+                    }
+                }, 2000);
                 
             } catch (error) {
                 console.error('Error toggling task:', error);
