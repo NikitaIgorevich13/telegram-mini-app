@@ -710,6 +710,13 @@
             try {
                 debugLog(`Toggle task ${taskId} for user ${telegramUserId}`);
                 
+                // Проверяем что taskId передан
+                if (!taskId) {
+                    debugLog('ERROR: taskId is empty!');
+                    showError('Ошибка: ID задачи не указан');
+                    return;
+                }
+                
                 const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
                 if (!taskCard) {
                     debugLog('Task card not found');
@@ -742,29 +749,38 @@
                 
                 showSuccess(isCurrentlyCompleted ? 'Задача возвращена в работу' : 'Задача выполнена!');
                 
+                // Формируем правильный URL
+                const toggleUrl = `${API_ENDPOINTS.toggleTask}/${taskId}/toggle`;
+                debugLog(`Toggle URL: ${toggleUrl}`);
+                
                 // Отправляем запрос на сервер
                 const requestBody = {
-                    task_id: parseInt(taskId),
                     user_id: telegramUserId,
                     status: newStatus
                 };
                 
-                debugLog(`Sending: ${JSON.stringify(requestBody)}`);
+                debugLog(`Sending to ${toggleUrl}: ${JSON.stringify(requestBody)}`);
                 
-                const result = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle`, {
+                const result = await apiRequest(toggleUrl, {
                     method: 'POST',
                     body: JSON.stringify(requestBody)
                 });
                 
                 debugLog(`Toggle result: ${JSON.stringify(result)}`);
                 
-                // Обновляем данные через небольшую задержку
-                setTimeout(async () => {
-                    await loadCalendarData();
-                    await loadUserData();
-                    // Перезагружаем задачи чтобы увидеть актуальный статус
-                    await loadTasks();
-                }, 1000);
+                // Проверяем результат
+                if (result.success) {
+                    showSuccess(isCurrentlyCompleted ? 'Задача возвращена в работу' : 'Задача выполнена!');
+                    
+                    // Обновляем данные через небольшую задержку
+                    setTimeout(async () => {
+                        await loadCalendarData();
+                        await loadUserData();
+                        await loadTasks();
+                    }, 1000);
+                } else {
+                    throw new Error('Toggle failed');
+                }
                 
             } catch (error) {
                 debugLog(`Toggle error: ${error.message}`);
