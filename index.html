@@ -631,10 +631,10 @@
                     }
                 }
                 
-                // Сохраняем задачи в глобальный массив
-                currentTasks = allTasks;
+                console.log('All tasks loaded:', allTasks);
                 
-                renderTasks(currentTasks);
+                // renderTasks сам отфильтрует и обновит currentTasks
+                renderTasks(allTasks);
                 
             } catch (error) {
                 console.error('Error loading tasks:', error);
@@ -697,19 +697,17 @@
                 
                 const checkbox = taskCard.querySelector('.checkbox');
                 const taskTitle = taskCard.querySelector('.task-title');
-                const task = currentTasks.find(t => t.id === parseInt(taskId));
                 
-                if (!checkbox || !taskTitle || !task) {
-                    console.error('Required elements not found');
+                if (!checkbox || !taskTitle) {
+                    console.error('Checkbox or title not found');
                     return;
                 }
                 
-                const isCurrentlyCompleted = task.status === 'completed';
+                // Определяем текущий статус по классам
+                const isCurrentlyCompleted = checkbox.classList.contains('checked');
                 const newStatus = isCurrentlyCompleted ? 'pending' : 'completed';
                 
-                // Мгновенно обновляем UI и локальное состояние
-                task.status = newStatus;
-                
+                // Мгновенно обновляем UI
                 if (isCurrentlyCompleted) {
                     // Снимаем отметку
                     checkbox.classList.remove('checked');
@@ -722,6 +720,12 @@
                     taskCard.classList.add('completed');
                     taskTitle.style.textDecoration = 'line-through';
                     checkbox.style.backgroundColor = '#007aff';
+                }
+                
+                // Обновляем объект задачи в массиве если он есть
+                const task = currentTasks.find(t => t.id === parseInt(taskId));
+                if (task) {
+                    task.status = newStatus;
                 }
                 
                 // Haptic feedback
@@ -836,7 +840,7 @@
             document.getElementById('tasksHeader').textContent = 
                 selectedDate.toLocaleDateString('ru-RU', options);
             
-            // Фильтруем задачи по выбранной дате на клиенте
+            // Фильтруем задачи по выбранной дате
             const selectedDateStr = formatDateKey(selectedDate);
             console.log('Filtering tasks for date:', selectedDateStr);
             
@@ -852,7 +856,11 @@
                 return taskDate === selectedDateStr;
             });
             
+            // Обновляем currentTasks отфильтрованными задачами
+            currentTasks = filteredTasks;
+            
             console.log('Filtered tasks:', filteredTasks);
+            console.log('Current tasks updated:', currentTasks);
             
             if (filteredTasks.length === 0) {
                 container.innerHTML = `
