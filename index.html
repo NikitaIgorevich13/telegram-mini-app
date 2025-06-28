@@ -10,7 +10,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
+            -webkit-tap-highlight-color: rgba(0,0,0,0.1);
         }
 
         body {
@@ -239,6 +239,10 @@
             cursor: pointer;
             position: relative;
             transition: all 0.2s;
+            pointer-events: auto;
+            touch-action: manipulation;
+            user-select: none;
+            z-index: 10;
         }
 
         .checkbox.checked {
@@ -815,8 +819,8 @@
                 html += `
                     <div class="task-card ${isCompleted ? 'completed' : ''}" data-task-id="${task.id}">
                         <div class="checkbox ${isCompleted ? 'checked' : ''}" 
-                             onclick="console.log('Checkbox clicked for task ${task.id}'); toggleTaskStatus('${task.id}');" 
-                             style="cursor: pointer; background-color: ${isCompleted ? '#007aff' : 'transparent'};">
+                             data-task-id="${task.id}"
+                             style="cursor: pointer; background-color: ${isCompleted ? '#007aff' : 'transparent'}; min-width: 24px; min-height: 24px; display: block;">
                         </div>
                         <div class="task-info">
                             <div class="task-title" style="text-decoration: ${isCompleted ? 'line-through' : 'none'}">${task.title}</div>
@@ -833,16 +837,55 @@
             console.log('Generated HTML:', html);
             container.innerHTML = html;
             
-            // Дополнительная проверка после рендеринга
+            // Добавляем event listeners ПОСЛЕ рендеринга
             setTimeout(() => {
-                const renderedCards = document.querySelectorAll('[data-task-id]');
-                console.log('Rendered task cards count:', renderedCards.length);
-                renderedCards.forEach(card => {
-                    const id = card.getAttribute('data-task-id');
-                    const checkbox = card.querySelector('.checkbox');
-                    console.log(`Card ${id}: checkbox found = ${!!checkbox}`);
+                console.log('Adding event listeners...');
+                const checkboxes = document.querySelectorAll('.checkbox[data-task-id]');
+                console.log('Found checkboxes:', checkboxes.length);
+                
+                checkboxes.forEach((checkbox, index) => {
+                    const taskId = checkbox.getAttribute('data-task-id');
+                    console.log(`Adding listener for checkbox ${index}, task ID: ${taskId}`);
+                    
+                    // Убираем старые listeners
+                    checkbox.removeEventListener('click', handleTaskToggle);
+                    checkbox.removeEventListener('touchstart', handleTaskToggle);
+                    
+                    // Добавляем новые
+                    checkbox.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('CLICK detected on checkbox for task:', taskId);
+                        alert(`Clicked task ${taskId}!`);
+                        toggleTaskStatus(taskId);
+                    });
+                    
+                    checkbox.addEventListener('touchstart', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('TOUCH detected on checkbox for task:', taskId);
+                        alert(`Touched task ${taskId}!`);
+                        toggleTaskStatus(taskId);
+                    });
+                    
+                    // Дополнительная область клика - вся карточка
+                    const taskCard = checkbox.closest('.task-card');
+                    if (taskCard) {
+                        taskCard.addEventListener('click', function(e) {
+                            if (e.target.closest('.checkbox')) return; // не дублируем если клик по checkbox
+                            console.log('CARD clicked for task:', taskId);
+                            alert(`Card clicked for task ${taskId}!`);
+                            toggleTaskStatus(taskId);
+                        });
+                    }
                 });
+                
+                console.log('Event listeners added successfully');
             }, 100);
+        }
+
+        function handleTaskToggle(e) {
+            // Вспомогательная функция для удаления старых listeners
         }
 
         function addNewTask() {
