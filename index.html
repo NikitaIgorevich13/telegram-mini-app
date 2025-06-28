@@ -565,9 +565,16 @@
         async function loadTasks() {
             try {
                 const dateStr = formatDateKey(selectedDate);
-                const tasks = await apiRequest(`${API_ENDPOINTS.tasks}/${telegramUserId}/${dateStr}`);
+                console.log('Loading tasks for date:', dateStr);
+                console.log('API URL:', `${API_ENDPOINTS.tasks}/${telegramUserId}/${dateStr}`);
                 
-                renderTasks(tasks || []);
+                const tasks = await apiRequest(`${API_ENDPOINTS.tasks}/${telegramUserId}/${dateStr}`);
+                console.log('Tasks received:', tasks);
+                
+                // Обрабатываем как массив или один объект
+                const tasksArray = Array.isArray(tasks) ? tasks : (tasks ? [tasks] : []);
+                
+                renderTasks(tasksArray);
             } catch (error) {
                 console.error('Error loading tasks:', error);
                 renderTasks([]);
@@ -797,7 +804,7 @@
                 // Загружаем календарь
                 await loadCalendarData();
                 
-                // Загружаем задачи на сегодня
+                // Загружаем задачи на выбранную дату (сегодня по умолчанию)
                 await loadTasks();
                 
                 console.log('App initialized successfully');
