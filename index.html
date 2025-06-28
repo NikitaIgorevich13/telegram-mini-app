@@ -643,6 +643,49 @@
             }
         }
 
+        // Локальное хранилище для несинхронизированных изменений
+        let pendingChanges = [];
+        
+        // Сохранение изменений для последующей синхронизации
+        function savePendingChange(taskId, newStatus) {
+            pendingChanges.push({
+                taskId: parseInt(taskId),
+                status: newStatus,
+                timestamp: new Date().toISOString()
+            });
+            console.log('Saved pending change:', pendingChanges);
+        }
+        
+        // Попытка синхронизации всех изменений
+        async function syncPendingChanges() {
+            if (pendingChanges.length === 0) return;
+            
+            console.log('Syncing pending changes:', pendingChanges);
+            const failedChanges = [];
+            
+            for (const change of pendingChanges) {
+                try {
+                    await apiRequest(`${API_ENDPOINTS.toggleTask}/${change.taskId}/toggle`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            task_id: change.taskId,
+                            status: change.status,
+                            user_id: telegramUserId
+                        })
+                    });
+                    console.log('✅ Synced change for task:', change.taskId);
+                } catch (error) {
+                    console.error('Failed to sync task:', change.taskId, error);
+                    failedChanges.push(change);
+                }
+            }
+            
+            pendingChanges = failedChanges;
+            if (failedChanges.length === 0) {
+                showSuccess('Все изменения синхронизированы');
+            }
+        }
+        
         window.toggleTaskStatus = async function(taskId) {
             try {
                 // Находим элементы задачи
@@ -654,15 +697,19 @@
                 
                 const checkbox = taskCard.querySelector('.checkbox');
                 const taskTitle = taskCard.querySelector('.task-title');
+                const task = currentTasks.find(t => t.id === parseInt(taskId));
                 
-                if (!checkbox || !taskTitle) {
-                    console.error('Checkbox or title not found');
+                if (!checkbox || !taskTitle || !task) {
+                    console.error('Required elements not found');
                     return;
                 }
                 
-                const isCurrentlyCompleted = checkbox.classList.contains('checked');
+                const isCurrentlyCompleted = task.status === 'completed';
+                const newStatus = isCurrentlyCompleted ? 'pending' : 'completed';
                 
-                // Мгновенно обновляем UI
+                // Мгновенно обновляем UI и локальное состояние
+                task.status = newStatus;
+                
                 if (isCurrentlyCompleted) {
                     // Снимаем отметку
                     checkbox.classList.remove('checked');
@@ -686,92 +733,17 @@
                     }
                 }
                 
-                // Пытаемся отправить в API (в фоне, с подробным логированием)
-                try {
-                    const newStatus = isCurrentlyCompleted ? 'pending' : 'completed';
-                    
-                    console.log('=== TOGGLE API ATTEMPT ===');
-                    console.log('Task ID:', taskId);
-                    console.log('Current status:', isCurrentlyCompleted ? 'completed' : 'pending');
-                    console.log('New status:', newStatus);
-                    console.log('Toggle URL:', `${API_ENDPOINTS.toggleTask}/${taskId}/toggle`);
-                    console.log('User ID:', telegramUserId);
-                    
-                    // Пробуем оригинальный toggle endpoint
-                    const response = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle`, {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            task_id: taskId,
-                            status: newStatus,
-                            user_id: telegramUserId
-                        })
-                    });
-                    
-                    console.log('✅ Toggle API SUCCESS:', response);
-                    
-                    // Показываем сообщение об успехе
-                    showSuccess(isCurrentlyCompleted ? 'Задача возвращена в работу' : 'Задача выполнена!');
-                    
-                } catch (apiError) {
-                    console.log('❌ Toggle API FAILED:', apiError.message);
-                    console.log('Error details:', apiError);
-                    
-                    // Пробуем альтернативные варианты
-                    console.log('Trying alternative methods...');
-                    
-                    // Вариант 1: Без /toggle в URL
-                    try {
-                        const alt1 = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}`, {
-                            method: 'POST',
-                            body: JSON.stringify({
-                                action: 'toggle',
-                                status: newStatus,
-                                user_id: telegramUserId
-                            })
-                        });
-                        console.log('✅ Alternative 1 SUCCESS:', alt1);
-                    } catch (e1) {
-                        console.log('❌ Alternative 1 failed:', e1.message);
-                        
-                        // Вариант 2: GET метод
-                        try {
-                            const alt2 = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle?user_id=${telegramUserId}&status=${newStatus}`, {
-                                method: 'GET'
-                            });
-                            console.log('✅ Alternative 2 SUCCESS:', alt2);
-                        } catch (e2) {
-                            console.log('❌ Alternative 2 failed:', e2.message);
-                            
-                            // Вариант 3: PUT метод
-                            try {
-                                const alt3 = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle`, {
-                                    method: 'PUT',
-                                    body: JSON.stringify({
-                                        task_id: parseInt(taskId),
-                                        completed: !isCurrentlyCompleted
-                                    })
-                                });
-                                console.log('✅ Alternative 3 SUCCESS:', alt3);
-                            } catch (e3) {
-                                console.log('❌ All toggle attempts failed');
-                                console.log('Current API_ENDPOINTS:', API_ENDPOINTS);
-                            }
-                        }
-                    }
-                }
+                // Показываем сообщение об успехе
+                showSuccess(isCurrentlyCompleted ? 'Задача возвращена в работу' : 'Задача выполнена!');
                 
-                // Обновляем календарь в фоне
-                setTimeout(async () => {
-                    try {
-                        await loadCalendarData();
-                    } catch (error) {
-                        console.error('Error updating calendar:', error);
-                    }
-                }, 1000);
+                // Сохраняем изменение для синхронизации
+                savePendingChange(taskId, newStatus);
+                
+                // Пытаемся синхронизировать немедленно
+                syncPendingChanges();
                 
             } catch (error) {
                 console.error('Error in toggleTaskStatus:', error);
-                // Даже при ошибках не показываем пользователю - просто логируем
             }
         };
 
