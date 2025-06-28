@@ -672,19 +672,56 @@
         async function loadTasks() {
             try {
                 const dateStr = formatDateKey(selectedDate);
-                const allTasks = await apiRequest(`${API_ENDPOINTS.tasks}/${telegramUserId}/${dateStr}`);
+                console.log('loadTasks: Loading for date:', dateStr);
+                
+                const response = await apiRequest(`${API_ENDPOINTS.tasks}/${telegramUserId}/${dateStr}`);
+                console.log('loadTasks: Raw response:', response);
+                console.log('loadTasks: Response type:', typeof response);
+                console.log('loadTasks: Is array?', Array.isArray(response));
+                
+                // Преобразуем ответ в массив
+                let allTasks = [];
+                
+                if (Array.isArray(response)) {
+                    // Если это уже массив
+                    allTasks = response;
+                } else if (response && typeof response === 'object') {
+                    // Если это объект, проверяем есть ли в нем массив данных
+                    if (response.data && Array.isArray(response.data)) {
+                        allTasks = response.data;
+                    } else if (response.tasks && Array.isArray(response.tasks)) {
+                        allTasks = response.tasks;
+                    } else if (response.id) {
+                        // Если это одна задача, оборачиваем в массив
+                        allTasks = [response];
+                    } else {
+                        // Если структура неизвестна, пробуем получить все значения объекта
+                        allTasks = Object.values(response).filter(item => 
+                            item && typeof item === 'object' && item.id
+                        );
+                    }
+                }
+                
+                console.log('loadTasks: Converted to array:', allTasks);
+                console.log('loadTasks: Array length:', allTasks.length);
                 
                 // Фильтруем задачи по выбранной дате
                 currentTasks = allTasks.filter(task => {
+                    if (!task || typeof task !== 'object') return false;
+                    
                     const taskDate = task.deadline ? 
                         formatDateKey(new Date(task.deadline)) : 
                         formatDateKey(new Date(task.created_at));
+                    
                     return taskDate === dateStr;
                 });
                 
+                console.log('loadTasks: Filtered tasks:', currentTasks);
                 renderTasks(currentTasks);
+                
             } catch (error) {
                 console.error('Error loading tasks:', error);
+                console.error('Error stack:', error.stack);
                 currentTasks = [];
                 renderTasks([]);
             }
@@ -715,9 +752,13 @@
                     task.status = 'completed';
                 }
                 
-                // Haptic feedback
-                if (tg && tg.HapticFeedback) {
-                    tg.HapticFeedback.impactOccurred('light');
+                // Haptic feedback (только для поддерживаемых версий)
+                if (tg && tg.HapticFeedback && typeof tg.HapticFeedback.impactOccurred === 'function') {
+                    try {
+                        tg.HapticFeedback.impactOccurred('light');
+                    } catch (e) {
+                        console.log('HapticFeedback not available');
+                    }
                 }
                 
                 // Отправляем на сервер
@@ -902,8 +943,12 @@
         async function changeMonth(direction) {
             currentDate.setMonth(currentDate.getMonth() + direction);
             await loadCalendarData();
-            if (tg && tg.HapticFeedback) {
-                tg.HapticFeedback.impactOccurred('light');
+            if (tg && tg.HapticFeedback && typeof tg.HapticFeedback.impactOccurred === 'function') {
+                try {
+                    tg.HapticFeedback.impactOccurred('light');
+                } catch (e) {
+                    console.log('HapticFeedback not available');
+                }
             }
         }
 
@@ -912,15 +957,23 @@
             selectedDate = new Date(year, month, day);
             renderCalendar();
             await loadTasks();
-            if (tg && tg.HapticFeedback) {
-                tg.HapticFeedback.selectionChanged();
+            if (tg && tg.HapticFeedback && typeof tg.HapticFeedback.selectionChanged === 'function') {
+                try {
+                    tg.HapticFeedback.selectionChanged();
+                } catch (e) {
+                    console.log('HapticFeedback not available');
+                }
             }
         }
 
         // Добавление новой задачи
         function addNewTask() {
-            if (tg && tg.HapticFeedback) {
-                tg.HapticFeedback.impactOccurred('medium');
+            if (tg && tg.HapticFeedback && typeof tg.HapticFeedback.impactOccurred === 'function') {
+                try {
+                    tg.HapticFeedback.impactOccurred('medium');
+                } catch (e) {
+                    console.log('HapticFeedback not available');
+                }
             }
             
             if (tg) {
