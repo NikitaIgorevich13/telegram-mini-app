@@ -714,7 +714,25 @@
             document.getElementById('tasksHeader').textContent = 
                 selectedDate.toLocaleDateString('ru-RU', options);
             
-            if (tasks.length === 0) {
+            // Фильтруем задачи по выбранной дате на клиенте
+            const selectedDateStr = formatDateKey(selectedDate);
+            console.log('Filtering tasks for date:', selectedDateStr);
+            
+            const filteredTasks = tasks.filter(task => {
+                if (!task) return false;
+                
+                // Проверяем deadline или created_at
+                const taskDate = task.deadline ? 
+                    formatDateKey(new Date(task.deadline)) : 
+                    formatDateKey(new Date(task.created_at));
+                
+                console.log('Task date:', taskDate, 'Selected:', selectedDateStr);
+                return taskDate === selectedDateStr;
+            });
+            
+            console.log('Filtered tasks:', filteredTasks);
+            
+            if (filteredTasks.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-icon">📝</div>
@@ -726,7 +744,7 @@
             }
             
             let html = '';
-            tasks.forEach(task => {
+            filteredTasks.forEach(task => {
                 const isCompleted = task.status === 'completed';
                 const priorityText = task.priority === 'high' ? 'Высокий' : 
                                    task.priority === 'medium' ? 'Средний' : 'Низкий';
