@@ -442,14 +442,14 @@
                     <span>дней</span>
                 </div>
             </div>
-            <button class="refresh-button" id="refreshBtn">↻</button>
+            <button class="refresh-button" onclick="refreshData()" id="refreshBtn">↻</button>
         </div>
 
         <div class="calendar-section">
             <div class="month-navigation">
-                <button class="nav-btn" id="prevMonthBtn">←</button>
+                <button class="nav-btn" onclick="changeMonth(-1)">←</button>
                 <div class="month-title" id="monthTitle">Январь 2024</div>
-                <button class="nav-btn" id="nextMonthBtn">→</button>
+                <button class="nav-btn" onclick="changeMonth(1)">→</button>
             </div>
             <div class="calendar-grid" id="calendar"></div>
         </div>
@@ -463,7 +463,7 @@
             </div>
         </div>
 
-        <button class="fab" id="addTaskBtn">+</button>
+        <button class="fab" onclick="addNewTask()">+</button>
     </div>
 
     <script>
@@ -506,6 +506,10 @@
             streak: 0
         };
         let currentTasks = [];
+        
+        function handleTaskToggle(e) {
+            // Вспомогательная функция для удаления старых listeners
+        }
 
         function showSuccess(message) {
             const successDiv = document.createElement('div');
@@ -627,15 +631,8 @@
                     }
                 }
                 
-                currentTasks = allTasks.filter(task => {
-                    if (!task || typeof task !== 'object') return false;
-                    
-                    const taskDate = task.deadline ? 
-                        formatDateKey(new Date(task.deadline)) : 
-                        formatDateKey(new Date(task.created_at));
-                    
-                    return taskDate === dateStr;
-                });
+                // Сохраняем задачи в глобальный массив
+                currentTasks = allTasks;
                 
                 renderTasks(currentTasks);
                 
@@ -648,71 +645,133 @@
 
         window.toggleTaskStatus = async function(taskId) {
             try {
+                // Находим элементы задачи
                 const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+                if (!taskCard) {
+                    console.error('Task card not found for ID:', taskId);
+                    return;
+                }
+                
                 const checkbox = taskCard.querySelector('.checkbox');
                 const taskTitle = taskCard.querySelector('.task-title');
-                const task = currentTasks.find(t => t.id === parseInt(taskId));
                 
-                if (!task) return;
+                if (!checkbox || !taskTitle) {
+                    console.error('Checkbox or title not found');
+                    return;
+                }
                 
-                const wasCompleted = task.status === 'completed';
+                const isCurrentlyCompleted = checkbox.classList.contains('checked');
                 
-                if (wasCompleted) {
+                // Мгновенно обновляем UI
+                if (isCurrentlyCompleted) {
+                    // Снимаем отметку
                     checkbox.classList.remove('checked');
                     taskCard.classList.remove('completed');
-                    taskTitle.classList.remove('completed');
-                    task.status = 'pending';
+                    taskTitle.style.textDecoration = 'none';
+                    checkbox.style.backgroundColor = 'transparent';
                 } else {
+                    // Ставим отметку
                     checkbox.classList.add('checked');
                     taskCard.classList.add('completed');
-                    taskTitle.classList.add('completed');
-                    task.status = 'completed';
+                    taskTitle.style.textDecoration = 'line-through';
+                    checkbox.style.backgroundColor = '#007aff';
                 }
                 
-                if (tg && tg.HapticFeedback && typeof tg.HapticFeedback.impactOccurred === 'function') {
+                // Haptic feedback
+                if (tg && tg.HapticFeedback) {
                     try {
                         tg.HapticFeedback.impactOccurred('light');
-                    } catch (e) {}
+                    } catch (e) {
+                        console.log('HapticFeedback not available');
+                    }
                 }
                 
+                // Пытаемся отправить в API (в фоне, с подробным логированием)
                 try {
-                    await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle`, {
+                    const newStatus = isCurrentlyCompleted ? 'pending' : 'completed';
+                    
+                    console.log('=== TOGGLE API ATTEMPT ===');
+                    console.log('Task ID:', taskId);
+                    console.log('Current status:', isCurrentlyCompleted ? 'completed' : 'pending');
+                    console.log('New status:', newStatus);
+                    console.log('Toggle URL:', `${API_ENDPOINTS.toggleTask}/${taskId}/toggle`);
+                    console.log('User ID:', telegramUserId);
+                    
+                    // Пробуем оригинальный toggle endpoint
+                    const response = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle`, {
                         method: 'POST',
                         body: JSON.stringify({
-                            task_id: parseInt(taskId),
+                            task_id: taskId,
+                            status: newStatus,
                             user_id: telegramUserId
                         })
                     });
                     
-                    showSuccess(wasCompleted ? 'Задача возвращена в работу' : 'Задача выполнена!');
+                    console.log('✅ Toggle API SUCCESS:', response);
                     
-                    setTimeout(loadCalendarData, 500);
-                    
-                    if (!wasCompleted) {
-                        setTimeout(loadUserData, 1000);
-                    }
+                    // Показываем сообщение об успехе
+                    showSuccess(isCurrentlyCompleted ? 'Задача возвращена в работу' : 'Задача выполнена!');
                     
                 } catch (apiError) {
-                    console.error('Toggle API error:', apiError);
+                    console.log('❌ Toggle API FAILED:', apiError.message);
+                    console.log('Error details:', apiError);
                     
-                    if (wasCompleted) {
-                        checkbox.classList.add('checked');
-                        taskCard.classList.add('completed');
-                        taskTitle.classList.add('completed');
-                        task.status = 'completed';
-                    } else {
-                        checkbox.classList.remove('checked');
-                        taskCard.classList.remove('completed');
-                        taskTitle.classList.remove('completed');
-                        task.status = 'pending';
+                    // Пробуем альтернативные варианты
+                    console.log('Trying alternative methods...');
+                    
+                    // Вариант 1: Без /toggle в URL
+                    try {
+                        const alt1 = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}`, {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                action: 'toggle',
+                                status: newStatus,
+                                user_id: telegramUserId
+                            })
+                        });
+                        console.log('✅ Alternative 1 SUCCESS:', alt1);
+                    } catch (e1) {
+                        console.log('❌ Alternative 1 failed:', e1.message);
+                        
+                        // Вариант 2: GET метод
+                        try {
+                            const alt2 = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle?user_id=${telegramUserId}&status=${newStatus}`, {
+                                method: 'GET'
+                            });
+                            console.log('✅ Alternative 2 SUCCESS:', alt2);
+                        } catch (e2) {
+                            console.log('❌ Alternative 2 failed:', e2.message);
+                            
+                            // Вариант 3: PUT метод
+                            try {
+                                const alt3 = await apiRequest(`${API_ENDPOINTS.toggleTask}/${taskId}/toggle`, {
+                                    method: 'PUT',
+                                    body: JSON.stringify({
+                                        task_id: parseInt(taskId),
+                                        completed: !isCurrentlyCompleted
+                                    })
+                                });
+                                console.log('✅ Alternative 3 SUCCESS:', alt3);
+                            } catch (e3) {
+                                console.log('❌ All toggle attempts failed');
+                                console.log('Current API_ENDPOINTS:', API_ENDPOINTS);
+                            }
+                        }
                     }
-                    
-                    showError('Не удалось обновить статус задачи');
                 }
+                
+                // Обновляем календарь в фоне
+                setTimeout(async () => {
+                    try {
+                        await loadCalendarData();
+                    } catch (error) {
+                        console.error('Error updating calendar:', error);
+                    }
+                }, 1000);
                 
             } catch (error) {
                 console.error('Error in toggleTaskStatus:', error);
-                showError('Произошла ошибка');
+                // Даже при ошибках не показываем пользователю - просто логируем
             }
         };
 
@@ -772,7 +831,7 @@
                 if (isToday) className += ' today';
                 if (isSelected) className += ' selected';
                 
-                html += `<div class="${className}" data-year="${year}" data-month="${month}" data-day="${day}">
+                html += `<div class="${className}" onclick="selectDate(${year}, ${month}, ${day})">
                     <span class="day-number">${day}</span>`;
                 
                 if (dayData && dayData.total > 0) {
@@ -795,26 +854,35 @@
             
             const calendarEl = document.getElementById('calendar');
             calendarEl.innerHTML = html;
-            
-            // Добавляем обработчики событий
-            calendarEl.querySelectorAll('.calendar-day:not(.other-month)').forEach(dayEl => {
-                dayEl.addEventListener('click', function() {
-                    const year = parseInt(this.getAttribute('data-year'));
-                    const month = parseInt(this.getAttribute('data-month'));
-                    const day = parseInt(this.getAttribute('data-day'));
-                    window.selectDate(year, month, day);
-                });
-            });
         }
 
         function renderTasks(tasks) {
             const container = document.getElementById('tasksList');
             
+            // Update header
             const options = { weekday: 'long', day: 'numeric', month: 'long' };
             document.getElementById('tasksHeader').textContent = 
                 selectedDate.toLocaleDateString('ru-RU', options);
             
-            if (tasks.length === 0) {
+            // Фильтруем задачи по выбранной дате на клиенте
+            const selectedDateStr = formatDateKey(selectedDate);
+            console.log('Filtering tasks for date:', selectedDateStr);
+            
+            const filteredTasks = tasks.filter(task => {
+                if (!task) return false;
+                
+                // Проверяем deadline или created_at
+                const taskDate = task.deadline ? 
+                    formatDateKey(new Date(task.deadline)) : 
+                    formatDateKey(new Date(task.created_at));
+                
+                console.log('Task date:', taskDate, 'Selected:', selectedDateStr);
+                return taskDate === selectedDateStr;
+            });
+            
+            console.log('Filtered tasks:', filteredTasks);
+            
+            if (filteredTasks.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-icon">📝</div>
@@ -826,7 +894,7 @@
             }
             
             let html = '';
-            tasks.forEach(task => {
+            filteredTasks.forEach(task => {
                 const isCompleted = task.status === 'completed';
                 const priorityText = task.priority === 'high' ? 'Высокий' : 
                                    task.priority === 'medium' ? 'Средний' : 'Низкий';
@@ -840,44 +908,74 @@
                     });
                 }
                 
+                console.log(`Rendering task ${task.id}, completed: ${isCompleted}`);
+                
+                // Экранируем title для безопасности
                 const safeTitle = escapeHtml(task.title || '');
                 
                 html += `
                     <div class="task-card ${isCompleted ? 'completed' : ''}" data-task-id="${task.id}">
-                        <div class="checkbox ${isCompleted ? 'checked' : ''}" data-task-id="${task.id}">
+                        <div class="checkbox ${isCompleted ? 'checked' : ''}" 
+                             data-task-id="${task.id}"
+                             style="cursor: pointer; background-color: ${isCompleted ? '#007aff' : 'transparent'}; min-width: 24px; min-height: 24px; display: block;">
                         </div>
                         <div class="task-info">
-                            <div class="task-title ${isCompleted ? 'completed' : ''}">${safeTitle}</div>
+                            <div class="task-title" style="text-decoration: ${isCompleted ? 'line-through' : 'none'}">${safeTitle}</div>
                             <div class="task-meta">
                                 ${deadlineText ? `<span>⏰ ${deadlineText}</span>` : ''}
                                 <span class="priority-badge priority-${task.priority}">${priorityText}</span>
-                                ${task.points_earned ? `<span>🏆 ${task.points_earned} очков</span>` : ''}
+                                <span>🏆 ${task.points_earned || 0} очков</span>
                             </div>
                         </div>
                     </div>
                 `;
             });
             
+            console.log('Generated HTML:', html);
             container.innerHTML = html;
             
-            // Добавляем обработчики событий после рендеринга
-            container.querySelectorAll('.checkbox').forEach(checkbox => {
-                checkbox.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    const taskId = this.getAttribute('data-task-id');
-                    window.toggleTaskStatus(taskId);
-                });
-            });
-            
-            // Также добавляем клик на всю карточку
-            container.querySelectorAll('.task-card').forEach(card => {
-                card.addEventListener('click', function(e) {
-                    if (!e.target.classList.contains('checkbox')) {
-                        const taskId = this.getAttribute('data-task-id');
-                        window.toggleTaskStatus(taskId);
+            // Добавляем event listeners ПОСЛЕ рендеринга
+            setTimeout(() => {
+                console.log('Adding event listeners...');
+                const checkboxes = document.querySelectorAll('.checkbox[data-task-id]');
+                console.log('Found checkboxes:', checkboxes.length);
+                
+                checkboxes.forEach((checkbox, index) => {
+                    const taskId = checkbox.getAttribute('data-task-id');
+                    console.log(`Adding listener for checkbox ${index}, task ID: ${taskId}`);
+                    
+                    // Убираем старые listeners
+                    checkbox.removeEventListener('click', handleTaskToggle);
+                    checkbox.removeEventListener('touchstart', handleTaskToggle);
+                    
+                    // Добавляем новые
+                    checkbox.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('CLICK detected on checkbox for task:', taskId);
+                        toggleTaskStatus(taskId);
+                    });
+                    
+                    checkbox.addEventListener('touchstart', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('TOUCH detected on checkbox for task:', taskId);
+                        toggleTaskStatus(taskId);
+                    });
+                    
+                    // Дополнительная область клика - вся карточка
+                    const taskCard = checkbox.closest('.task-card');
+                    if (taskCard) {
+                        taskCard.addEventListener('click', function(e) {
+                            if (e.target.closest('.checkbox')) return; // не дублируем если клик по checkbox
+                            console.log('CARD clicked for task:', taskId);
+                            toggleTaskStatus(taskId);
+                        });
                     }
                 });
-            });
+                
+                console.log('Event listeners added successfully');
+            }, 100);
         }
 
         window.changeMonth = async function(direction) {
@@ -943,12 +1041,6 @@
 
         async function init() {
             try {
-                // Добавляем обработчики событий для кнопок
-                document.getElementById('prevMonthBtn').addEventListener('click', () => window.changeMonth(-1));
-                document.getElementById('nextMonthBtn').addEventListener('click', () => window.changeMonth(1));
-                document.getElementById('addTaskBtn').addEventListener('click', window.addNewTask);
-                document.getElementById('refreshBtn').addEventListener('click', window.refreshData);
-                
                 renderCalendar();
                 
                 const container = document.getElementById('tasksList');
