@@ -833,7 +833,7 @@
             tasks: 'https://nbykanov13.app.n8n.cloud/webhook/2fd6cb69-88fa-4d08-aba2-221247b6652b/api/tasks',
             calendar: 'https://nbykanov13.app.n8n.cloud/webhook/a8c27692-17b1-45f8-a11f-0e5a7063a5ed/api/calendar',
             toggleTask: 'https://nbykanov13.app.n8n.cloud/webhook/a3911d71-ce2f-4e9c-a05d-f35f1c4779c8/api/tasks',
-           trainerMode: 'https://nbykanov13.app.n8n.cloud/webhook/trainer-mode-webhook-id/api/user'
+            trainerMode: 'https://nbykanov13.app.n8n.cloud/webhook/trainer-mode-webhook-id/api/user'
         };
         
         let tg = null;
@@ -950,7 +950,15 @@
                     body: JSON.stringify({ mode: mode })
                 });
                 
-                if (response.success) {
+                // Отладка ответа от сервера
+                console.log('=== TRAINER MODE RESPONSE DEBUG ===');
+                console.log('Response type:', typeof response);
+                console.log('Response:', JSON.stringify(response, null, 2));
+                console.log('response.success:', response.success);
+                console.log('response.mode:', response.mode);
+                
+                // Более гибкая проверка успеха
+                if (response.success === true || response.mode || response[0]?.trainer_mode) {
                     let message = '';
                     let trainerMessage = '';
                     
@@ -974,7 +982,8 @@
                         showTrainerMessage(trainerMessage, mode);
                     }, 1500);
                 } else {
-                    throw new Error('Не удалось изменить режим');
+                    console.log('Unexpected response format:', response);
+                    throw new Error('Неожиданный формат ответа от сервера');
                 }
             } catch (error) {
                 console.error('Error changing trainer mode:', error);
@@ -988,7 +997,7 @@
                 });
                 document.querySelector(`[data-mode="${oldMode}"]`)?.classList.add('active');
                 
-                showError('Ошибка при изменении режима');
+                showError('Ошибка при изменении режима: ' + error.message);
             }
         };
         
