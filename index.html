@@ -1067,7 +1067,8 @@
             toggleTask: 'https://nbykanov13.app.n8n.cloud/webhook/a3911d71-ce2f-4e9c-a05d-f35f1c4779c8/api/tasks',
             trainerMode: 'https://nbykanov13.app.n8n.cloud/webhook/trainer-mode-webhook-id/api/user',
             updateTask: 'https://nbykanov13.app.n8n.cloud/webhook/update-task-webhook-id/api/tasks',
-            deleteTask: 'https://nbykanov13.app.n8n.cloud/webhook/delete-task-webhook-id/api/tasks'
+            deleteTask: 'https://nbykanov13.app.n8n.cloud/webhook/delete-task-webhook-id/api/tasks',
+            weeklyStats: 'https://nbykanov13.app.n8n.cloud/webhook/weekly-stats-webhook-id/api/tasks'
         };
         
         let tg = null;
@@ -1195,25 +1196,21 @@
         // Загрузка недельного прогресса
         async function loadWeeklyProgress() {
             try {
-                const endDate = new Date();
-                const startDate = new Date();
-                startDate.setDate(startDate.getDate() - 6);
+                const response = await apiRequest(`${API_ENDPOINTS.weeklyStats}/${telegramUserId}/weekly`);
                 
-                const response = await apiRequest(`${API_ENDPOINTS.tasks}/${telegramUserId}/weekly`);
+                if (!Array.isArray(response)) {
+                    console.error('Invalid weekly stats response');
+                    return;
+                }
+                
+                weeklyStats = response;
                 
                 const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
                 const chartContainer = document.getElementById('progressChart');
                 chartContainer.innerHTML = '';
                 
-                for (let i = 0; i < 7; i++) {
-                    const date = new Date(startDate);
-                    date.setDate(date.getDate() + i);
-                    
-                    const dayData = weeklyStats.find(d => {
-                        const dDate = new Date(d.date);
-                        return dDate.toDateString() === date.toDateString();
-                    }) || { completed: 0 };
-                    
+                response.forEach(dayData => {
+                    const date = new Date(dayData.date);
                     const maxHeight = 150;
                     const height = Math.min((dayData.completed / 10) * maxHeight, maxHeight);
                     
@@ -1225,7 +1222,7 @@
                     `;
                     
                     chartContainer.appendChild(bar);
-                }
+                });
             } catch (error) {
                 console.error('Error loading weekly progress:', error);
             }
@@ -1374,14 +1371,14 @@
                 const updatedTask = {
                     title: document.getElementById('editTitle').value,
                     deadline: document.getElementById('editDeadline').value || null,
-                    priority: document.getElementById('editPriority').value
+                    priority: document.getElementById('editPriority').value,
+                    user_id: telegramUserId
                 };
                 
-                // Здесь должен быть API запрос на обновление
-                // await apiRequest(`${API_ENDPOINTS.updateTask}/${editingTask.id}`, {
-                //     method: 'PUT',
-                //     body: JSON.stringify(updatedTask)
-                // });
+                await apiRequest(`${API_ENDPOINTS.updateTask}/${editingTask.id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(updatedTask)
+                });
                 
                 showSuccess('Задача обновлена');
                 closeEditModal();
@@ -1398,9 +1395,9 @@
             
             if (confirm('Удалить задачу?')) {
                 try {
-                    // await apiRequest(`${API_ENDPOINTS.deleteTask}/${editingTask.id}`, {
-                    //     method: 'DELETE'
-                    // });
+                    await apiRequest(`${API_ENDPOINTS.deleteTask}/${editingTask.id}?user_id=${telegramUserId}`, {
+                        method: 'DELETE'
+                    });
                     
                     showSuccess('Задача удалена');
                     closeEditModal();
@@ -1845,7 +1842,10 @@
         window.deleteTaskSwipe = async function(taskId) {
             if (confirm('Удалить задачу?')) {
                 try {
-                    // Здесь должен быть API запрос
+                    await apiRequest(`${API_ENDPOINTS.deleteTask}/${taskId}?user_id=${telegramUserId}`, {
+                        method: 'DELETE'
+                    });
+                    
                     showSuccess('Задача удалена');
                     await loadTasks();
                     await loadCalendarData();
