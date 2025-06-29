@@ -1194,9 +1194,84 @@
             }
         };
 
+        window.testAllEndpoints = async function() {
+            debugLog('=== TESTING ALL ENDPOINTS ===', 'info');
+            
+            // Test User endpoint
+            try {
+                debugLog('Testing User endpoint...', 'info');
+                await apiRequest(`${API_ENDPOINTS.user}/${telegramUserId}`);
+                debugLog('✅ User endpoint OK', 'success');
+            } catch (e) {
+                debugLog(`❌ User endpoint failed: ${e.message}`, 'error');
+            }
+            
+            // Test Tasks endpoint
+            try {
+                debugLog('Testing Tasks endpoint...', 'info');
+                const today = formatDateKey(new Date());
+                await apiRequest(`${API_ENDPOINTS.tasks}/${telegramUserId}/${today}`);
+                debugLog('✅ Tasks endpoint OK', 'success');
+            } catch (e) {
+                debugLog(`❌ Tasks endpoint failed: ${e.message}`, 'error');
+            }
+            
+            // Test Weekly Stats endpoint
+            try {
+                debugLog('Testing Weekly Stats endpoint...', 'info');
+                await apiRequest(`${API_ENDPOINTS.weeklyStats}/${telegramUserId}/weekly`);
+                debugLog('✅ Weekly Stats endpoint OK', 'success');
+            } catch (e) {
+                debugLog(`❌ Weekly Stats endpoint failed: ${e.message}`, 'error');
+            }
+            
+            // Test Update endpoint (OPTIONS)
+            try {
+                debugLog('Testing Update endpoint (OPTIONS)...', 'info');
+                const updateUrl = `${API_ENDPOINTS.updateTask}/test-id`;
+                debugLog(`Full Update URL: ${updateUrl}`, 'info');
+                
+                await fetch(updateUrl, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                debugLog('✅ Update endpoint (OPTIONS) OK', 'success');
+            } catch (e) {
+                debugLog(`❌ Update endpoint failed: ${e.message}`, 'error');
+            }
+            
+            // Test Delete endpoint (OPTIONS)
+            try {
+                debugLog('Testing Delete endpoint (OPTIONS)...', 'info');
+                const deleteUrl = `${API_ENDPOINTS.deleteTask}/test-id?user_id=${telegramUserId}`;
+                debugLog(`Full Delete URL: ${deleteUrl}`, 'info');
+                
+                await fetch(deleteUrl, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                debugLog('✅ Delete endpoint (OPTIONS) OK', 'success');
+            } catch (e) {
+                debugLog(`❌ Delete endpoint failed: ${e.message}`, 'error');
+            }
+            
+            debugLog('=== TEST COMPLETE ===', 'info');
+        };
+        
         window.clearDebugLog = function() {
             document.getElementById('debugLog').innerHTML = '';
             debugLog('Debug log cleared', 'info');
+            
+            // Добавляем кнопку теста после очистки
+            const testBtn = document.createElement('button');
+            testBtn.textContent = 'Test All Endpoints';
+            testBtn.style.cssText = 'margin: 5px; padding: 5px 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;';
+            testBtn.onclick = testAllEndpoints;
+            document.getElementById('debugLog').appendChild(testBtn);
         };
         let statsData = {
             completed_total: 0,
@@ -1477,8 +1552,12 @@
         // Редактирование задачи
         window.openEditModal = async function(taskId) {
             const task = currentTasks.find(t => t.id === taskId);
-            if (!task) return;
+            if (!task) {
+                debugLog(`Task ${taskId} not found in currentTasks`, 'error');
+                return;
+            }
             
+            debugLog(`Opening edit modal for task: ${task.id} - ${task.title}`, 'info');
             editingTask = task;
             
             document.getElementById('editTitle').value = task.title;
@@ -1672,9 +1751,21 @@
                 debugLog(`Response status: ${response.status}`, response.ok ? 'success' : 'error');
                 
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    debugLog(`Error response: ${errorText}`, 'error');
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    let errorText = '';
+                    try {
+                        errorText = await response.text();
+                        debugLog(`Error response: ${errorText}`, 'error');
+                    } catch (e) {
+                        debugLog(`Could not read error response`, 'error');
+                    }
+                    
+                    // Специальная обработка для 404
+                    if (response.status === 404) {
+                        debugLog(`404 Error: Endpoint not found - ${url}`, 'error');
+                        throw new Error('Endpoint not found. Check webhook configuration.');
+                    }
+                    
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
                 }
                 
                 const text = await response.text();
@@ -1694,8 +1785,15 @@
                 
             } catch (error) {
                 debugLog(`API Error: ${error.message}`, 'error');
+                debugLog(`Error stack: ${error.stack}`, 'error');
+                
+                // Проверяем тип ошибки
                 if (error.name === 'AbortError') {
+                    debugLog('Request timeout - check if n8n workflow is active', 'error');
                     throw new Error('Запрос превысил время ожидания');
+                } else if (error.message.includes('Failed to fetch')) {
+                    debugLog('Network error - check CORS and webhook status', 'error');
+                    throw new Error('Сетевая ошибка. Проверьте подключение.');
                 }
                 throw error;
             }
