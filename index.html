@@ -1596,8 +1596,12 @@
                 
                 debugLog(`Updating task ${editingTask.id}`, 'info');
                 
+                // ВРЕМЕННО: Используем POST вместо PUT для обхода CORS
                 await apiRequest(`${API_ENDPOINTS.updateTask}/${editingTask.id}`, {
-                    method: 'PUT',
+                    method: 'POST', // Изменено с PUT на POST
+                    headers: {
+                        'X-HTTP-Method-Override': 'PUT' // Указываем реальный метод
+                    },
                     body: JSON.stringify(updatedTask)
                 });
                 
