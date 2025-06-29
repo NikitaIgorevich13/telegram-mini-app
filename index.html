@@ -849,29 +849,83 @@
             animation: spin 1s linear infinite;
         }
 
-        .points-animation {
+        .debug-panel {
             position: fixed;
-            font-size: 24px;
-            font-weight: bold;
-            color: #34c759;
-            pointer-events: none;
-            z-index: 3000;
-            animation: floatUp 1.5s ease-out forwards;
+            bottom: 70px;
+            left: 0;
+            right: 0;
+            background: var(--tg-theme-bg-color, #ffffff);
+            border-top: 1px solid var(--tg-theme-hint-color, #8e8e93);
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            z-index: 999;
+            font-size: 12px;
+            padding: 10px;
         }
 
-        @keyframes floatUp {
-            0% {
-                transform: translateY(0) scale(0.5);
-                opacity: 0;
-            }
-            50% {
-                transform: translateY(-30px) scale(1);
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(-60px) scale(0.8);
-                opacity: 0;
-            }
+        .debug-panel.active {
+            display: block;
+        }
+
+        .debug-log {
+            margin-bottom: 5px;
+            padding: 5px;
+            background: var(--tg-theme-secondary-bg-color, #f2f2f7);
+            border-radius: 4px;
+            word-break: break-all;
+        }
+
+        .debug-log.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .debug-log.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .debug-log.info {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .debug-toggle {
+            position: fixed;
+            bottom: 140px;
+            right: 24px;
+            width: 40px;
+            height: 40px;
+            background: #ff9800;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+            cursor: pointer;
+            z-index: 901;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .debug-toggle:active {
+            transform: scale(0.9);
+        }
+
+        .debug-clear {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            background: var(--tg-theme-button-color, #007aff);
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -924,6 +978,7 @@
             </div>
 
             <button class="fab" onclick="addNewTask()">+</button>
+            <button class="debug-toggle" onclick="toggleDebug()">DBG</button>
         </div>
 
         <!-- Страница статистики -->
@@ -1014,6 +1069,12 @@
         </div>
     </div>
     
+    <!-- Панель отладки -->
+    <div class="debug-panel" id="debugPanel">
+        <button class="debug-clear" onclick="clearDebugLog()">Clear</button>
+        <div id="debugLog"></div>
+    </div>
+    
     <!-- Модальное окно редактирования -->
     <div class="edit-modal" id="editModal">
         <div class="edit-modal-content">
@@ -1059,7 +1120,8 @@
             trainerMode: 'https://nbykanov13.app.n8n.cloud/webhook/trainer-mode-webhook-id/api/user',
             updateTask: 'https://nbykanov13.app.n8n.cloud/webhook/update-task-webhook-id/api/tasks',
             deleteTask: 'https://nbykanov13.app.n8n.cloud/webhook/delete-task-webhook-id/api/tasks',
-            weeklyStats: 'https://nbykanov13.app.n8n.cloud/webhook/weekly-stats-webhook-id/api/tasks'
+            weeklyStats: 'https://nbykanov13.app.n8n.cloud/webhook/weekly-stats-webhook-id/api/tasks',
+            optionsTasks: 'https://nbykanov13.app.n8n.cloud/webhook/options-tasks-webhook-id/api/tasks'
         };
         
         let tg = null;
@@ -1095,6 +1157,47 @@
         let currentTasks = [];
         let weeklyStats = [];
         let editingTask = null;
+        let debugEnabled = false;
+
+        // Функции отладки
+        function debugLog(message, type = 'info') {
+            if (!debugEnabled) return;
+            
+            const debugLog = document.getElementById('debugLog');
+            const logEntry = document.createElement('div');
+            logEntry.className = `debug-log ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            debugLog.insertBefore(logEntry, debugLog.firstChild);
+            
+            // Ограничиваем количество логов
+            while (debugLog.children.length > 50) {
+                debugLog.removeChild(debugLog.lastChild);
+            }
+        }
+
+        window.toggleDebug = function() {
+            debugEnabled = !debugEnabled;
+            const panel = document.getElementById('debugPanel');
+            panel.classList.toggle('active', debugEnabled);
+            
+            if (debugEnabled) {
+                debugLog('Debug panel activated', 'success');
+                debugLog(`User ID: ${telegramUserId}`, 'info');
+                debugLog(`API Endpoints loaded`, 'info');
+            }
+            
+            if (tg && tg.HapticFeedback) {
+                try {
+                    tg.HapticFeedback.selectionChanged();
+                } catch (e) {}
+            }
+        };
+
+        window.clearDebugLog = function() {
+            document.getElementById('debugLog').innerHTML = '';
+            debugLog('Debug log cleared', 'info');
+        };
         let statsData = {
             completed_total: 0,
             pending: 0,
@@ -1401,6 +1504,8 @@
             
             if (!editingTask) return;
             
+            debugLog('Saving task changes...', 'info');
+            
             try {
                 const updatedTask = {
                     title: document.getElementById('editTitle').value,
@@ -1410,17 +1515,21 @@
                     has_specific_time: !!document.getElementById('editDeadline').value
                 };
                 
+                debugLog(`Updating task ${editingTask.id}`, 'info');
+                
                 await apiRequest(`${API_ENDPOINTS.updateTask}/${editingTask.id}`, {
                     method: 'PUT',
                     body: JSON.stringify(updatedTask)
                 });
                 
                 showSuccess('Задача обновлена');
+                debugLog('Task updated successfully', 'success');
                 closeEditModal();
                 await loadTasks();
                 await loadCalendarData();
                 
             } catch (error) {
+                debugLog(`Update error: ${error.message}`, 'error');
                 showError('Ошибка при обновлении задачи');
             }
         });
@@ -1430,17 +1539,21 @@
             if (!editingTask) return;
             
             if (confirm('Удалить задачу?')) {
+                debugLog(`Deleting task ${editingTask.id}...`, 'info');
+                
                 try {
                     await apiRequest(`${API_ENDPOINTS.deleteTask}/${editingTask.id}?user_id=${telegramUserId}`, {
                         method: 'DELETE'
                     });
                     
                     showSuccess('Задача удалена');
+                    debugLog('Task deleted successfully', 'success');
                     closeEditModal();
                     await loadTasks();
                     await loadCalendarData();
                     
                 } catch (error) {
+                    debugLog(`Delete error: ${error.message}`, 'error');
                     showError('Ошибка при удалении задачи');
                 }
             }
@@ -1449,15 +1562,19 @@
         // Удаление задачи через свайп
         window.deleteTaskSwipe = async function(taskId) {
             if (confirm('Удалить задачу?')) {
+                debugLog(`Deleting task ${taskId} via swipe...`, 'info');
+                
                 try {
                     await apiRequest(`${API_ENDPOINTS.deleteTask}/${taskId}?user_id=${telegramUserId}`, {
                         method: 'DELETE'
                     });
                     
                     showSuccess('Задача удалена');
+                    debugLog('Task deleted successfully', 'success');
                     await loadTasks();
                     await loadCalendarData();
                 } catch (error) {
+                    debugLog(`Delete error: ${error.message}`, 'error');
                     showError('Ошибка при удалении задачи');
                 }
             }
@@ -1466,15 +1583,22 @@
         // Переключение статуса задачи
         window.toggleTaskStatus = async function(taskId) {
             try {
+                debugLog(`Toggling task ${taskId} status...`, 'info');
+                
                 const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
                 const task = currentTasks.find(t => t.id === taskId);
-                if (!taskCard || !task) return;
+                if (!taskCard || !task) {
+                    debugLog('Task not found in UI', 'error');
+                    return;
+                }
                 
                 const checkbox = taskCard.querySelector('.checkbox');
                 const taskTitle = taskCard.querySelector('.task-title');
                 
                 const wasCompleted = checkbox.classList.contains('checked');
                 const newStatus = wasCompleted ? 'pending' : 'completed';
+                
+                debugLog(`Task was ${wasCompleted ? 'completed' : 'pending'}, changing to ${newStatus}`, 'info');
                 
                 // Оптимистичное обновление UI
                 if (wasCompleted) {
@@ -1506,6 +1630,8 @@
                     })
                 });
                 
+                debugLog('Task status toggled successfully', 'success');
+                
                 // Обновляем данные в фоне
                 setTimeout(async () => {
                     await loadCalendarData();
@@ -1514,6 +1640,7 @@
                 }, 1000);
                 
             } catch (error) {
+                debugLog(`Toggle error: ${error.message}`, 'error');
                 showError('Ошибка при обновлении задачи');
                 // Откатываем изменения
                 await loadTasks();
@@ -1523,6 +1650,11 @@
 
         async function apiRequest(url, options = {}) {
             try {
+                debugLog(`API Request: ${options.method || 'GET'} ${url}`, 'info');
+                if (options.body) {
+                    debugLog(`Request body: ${options.body}`, 'info');
+                }
+                
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 10000);
                 
@@ -1537,11 +1669,16 @@
                 
                 clearTimeout(timeoutId);
                 
+                debugLog(`Response status: ${response.status}`, response.ok ? 'success' : 'error');
+                
                 if (!response.ok) {
+                    const errorText = await response.text();
+                    debugLog(`Error response: ${errorText}`, 'error');
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
                 const text = await response.text();
+                debugLog(`Response: ${text.substring(0, 200)}${text.length > 200 ? '...' : ''}`, 'success');
                 
                 if (!text || text.trim() === '') {
                     return {};
@@ -1551,10 +1688,12 @@
                     const data = JSON.parse(text);
                     return data;
                 } catch (parseError) {
+                    debugLog(`Parse error: ${parseError.message}`, 'error');
                     return { success: true, raw: text };
                 }
                 
             } catch (error) {
+                debugLog(`API Error: ${error.message}`, 'error');
                 if (error.name === 'AbortError') {
                     throw new Error('Запрос превысил время ожидания');
                 }
@@ -1564,6 +1703,7 @@
 
         async function loadUserData() {
             try {
+                debugLog('Loading user data...', 'info');
                 const userData = await apiRequest(`${API_ENDPOINTS.user}/${telegramUserId}`);
                 
                 if (userData && userData.length > 0) {
@@ -1578,6 +1718,8 @@
                         trainer_mode: user.trainer_mode || 'normal',
                         max_streak: user.max_streak || 0
                     };
+                    
+                    debugLog(`User loaded: ${userInfo.name}, points: ${userInfo.points}, streak: ${userInfo.streak}`, 'success');
                     
                     document.getElementById('userName').textContent = userInfo.name;
                     document.getElementById('userRank').textContent = userInfo.rank;
@@ -1607,6 +1749,7 @@
                 }
                 
             } catch (error) {
+                debugLog(`Error loading user data: ${error.message}`, 'error');
                 console.error('Error loading user data:', error);
             }
         }
@@ -1656,6 +1799,8 @@
         async function loadTasks() {
             try {
                 const dateStr = formatDateKey(selectedDate);
+                debugLog(`Loading tasks for ${dateStr}...`, 'info');
+                
                 const response = await apiRequest(`${API_ENDPOINTS.tasks}/${telegramUserId}/${dateStr}`);
                 
                 let allTasks = [];
@@ -1672,9 +1817,11 @@
                     }
                 }
                 
+                debugLog(`Loaded ${allTasks.length} tasks`, 'success');
                 renderTasks(allTasks);
                 
             } catch (error) {
+                debugLog(`Error loading tasks: ${error.message}`, 'error');
                 console.error('Error loading tasks:', error);
                 currentTasks = [];
                 renderTasks([]);
