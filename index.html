@@ -1544,7 +1544,8 @@
                 // Подготавливаем данные для отправки
                 let requestBody = {
                     user_id: telegramUserId,
-                    action: action
+                    action: action,
+                    task_id: taskId  // Добавляем task_id в body
                 };
                 
                 if (action === 'toggle') {
@@ -1559,11 +1560,11 @@
                         has_specific_time: editingTask.has_specific_time
                     };
                 } else if (action === 'delete' && editingTask) {
-                    // Для delete нужен только user_id
+                    // Для delete уже есть user_id и task_id
                 }
                 
-                // Отправляем запрос с нужным action
-                const actionUrl = `${API_ENDPOINTS.toggleTask}/${taskId}/${action}`;
+                // Отправляем запрос с action в URL
+                const actionUrl = `${API_ENDPOINTS.toggleTask}/${action}`;
                 const response = await apiRequest(actionUrl, {
                     method: 'POST',
                     body: JSON.stringify(requestBody)
