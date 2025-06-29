@@ -6,8 +6,13 @@
     <title>Task Tracker - Планировщик задач</title>
     <meta name="description" content="Умный планировщик задач с ИИ-тренерами">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'>📝</svg>">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+  // Блокируем загрузку Sentry если она есть
+  window.Sentry = undefined;
+  window.__SENTRY__ = undefined;
+</script>
+
+   <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * {
             margin: 0;
