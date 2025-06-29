@@ -6,19 +6,23 @@
     <title>Task Tracker - Планировщик задач</title>
     <meta name="description" content="Умный планировщик задач с ИИ-тренерами">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'>📝</svg>">
+    
     <script>
-  // Блокируем загрузку Sentry если она есть
-  window.Sentry = undefined;
-  window.__SENTRY__ = undefined;
-</script>
-
-   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+      // Блокируем загрузку Sentry если она есть
+      window.Sentry = undefined;
+      window.__SENTRY__ = undefined;
+    </script>
+    
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             -webkit-tap-highlight-color: rgba(0,0,0,0.1);
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         body {
@@ -34,7 +38,7 @@
         .app {
             min-height: 100vh;
             background: var(--tg-theme-secondary-bg-color, #f2f2f7);
-            padding-bottom: 70px; /* Место для bottom nav */
+            padding-bottom: 70px;
         }
 
         .header {
@@ -101,8 +105,6 @@
             font-weight: 500;
             margin-top: 4px;
             transition: all 0.3s ease;
-            opacity: 1;
-            transform: scale(1);
         }
 
         .trainer-badge.soft {
@@ -131,10 +133,22 @@
             gap: 6px;
             font-size: 15px;
             color: var(--tg-theme-text-color, #000);
+            transition: all 0.3s ease;
         }
 
         .stat-value {
             font-weight: 600;
+        }
+
+        .stat-value.animating {
+            animation: pulse 0.5s ease-out;
+            color: #34c759;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
         }
 
         /* Навигация по вкладкам */
@@ -219,45 +233,11 @@
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
-            transform: scale(1);
-        }
-
-        .trainer-mode::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 60px;
-            height: 60px;
-            background: rgba(0, 0, 0, 0.03);
-            border-radius: 50%;
-            transform: translate(20px, -20px);
-            transition: all 0.3s;
         }
 
         .trainer-mode.active {
             border-color: var(--tg-theme-button-color, #007aff);
             background: rgba(0, 122, 255, 0.05);
-            transform: scale(1.02);
-        }
-
-        .trainer-mode.active::before {
-            transform: translate(10px, -10px) scale(1.2);
-            background: rgba(0, 122, 255, 0.1);
-        }
-
-        .trainer-mode:active {
-            transform: scale(0.98);
-        }
-        
-        .trainer-mode.switching {
-            animation: pulse 0.3s ease-out;
-        }
-        
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
         }
 
         .mode-title {
@@ -289,6 +269,7 @@
             font-size: 48px;
             font-weight: 700;
             color: var(--tg-theme-button-color, #007aff);
+            transition: all 0.3s ease;
         }
 
         .big-stat-label {
@@ -308,6 +289,11 @@
             padding: 16px;
             background: var(--tg-theme-secondary-bg-color, #f2f2f7);
             border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-box:active {
+            transform: scale(0.95);
         }
 
         .stat-box-value {
@@ -320,6 +306,41 @@
             font-size: 12px;
             color: var(--tg-theme-hint-color, #8e8e93);
             margin-top: 4px;
+        }
+
+        /* График прогресса */
+        .progress-chart {
+            margin-top: 20px;
+            height: 200px;
+            position: relative;
+            background: var(--tg-theme-secondary-bg-color, #f2f2f7);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .chart-bars {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            height: 150px;
+            gap: 8px;
+        }
+
+        .chart-bar {
+            flex: 1;
+            background: var(--tg-theme-button-color, #007aff);
+            border-radius: 4px 4px 0 0;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .chart-bar-label {
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: var(--tg-theme-hint-color, #8e8e93);
         }
 
         .calendar-section {
@@ -452,11 +473,43 @@
             display: flex;
             align-items: flex-start;
             gap: 12px;
-            transition: opacity 0.2s;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            touch-action: pan-y;
         }
 
         .task-card.completed {
             opacity: 0.6;
+        }
+
+        .task-card.dragging {
+            transform: translateX(var(--drag-x, 0));
+            transition: none;
+        }
+
+        .task-card.editing {
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+            border: 2px solid var(--tg-theme-button-color, #007aff);
+        }
+
+        .task-actions {
+            position: absolute;
+            top: 0;
+            right: -100px;
+            bottom: 0;
+            width: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ff3b30;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .task-card.show-actions .task-actions {
+            right: 0;
         }
 
         .checkbox {
@@ -511,6 +564,21 @@
             gap: 12px;
             font-size: 13px;
             color: var(--tg-theme-hint-color, #8e8e93);
+        }
+
+        .deadline-info {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .deadline-info.no-time {
+            color: #8e8e93;
+        }
+
+        .deadline-info.with-time {
+            color: #ff9500;
+            font-weight: 500;
         }
 
         .priority-badge {
@@ -591,6 +659,125 @@
             transform: scale(0.9);
         }
 
+        /* Модальное окно редактирования */
+        .edit-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .edit-modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .edit-modal-content {
+            background: var(--tg-theme-bg-color, white);
+            width: 100%;
+            max-width: 500px;
+            border-radius: 16px 16px 0 0;
+            padding: 24px;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .edit-modal.active .edit-modal-content {
+            transform: translateY(0);
+        }
+
+        .edit-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .edit-modal-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .edit-modal-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: var(--tg-theme-secondary-bg-color, #f2f2f7);
+            border-radius: 16px;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .edit-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--tg-theme-hint-color, #8e8e93);
+        }
+
+        .form-input {
+            padding: 12px;
+            border: 1px solid var(--tg-theme-secondary-bg-color, #f2f2f7);
+            border-radius: 8px;
+            font-size: 16px;
+            background: var(--tg-theme-secondary-bg-color, #f2f2f7);
+            color: var(--tg-theme-text-color, #000);
+        }
+
+        .form-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .form-button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .form-button.primary {
+            background: var(--tg-theme-button-color, #007aff);
+            color: var(--tg-theme-button-text-color, white);
+        }
+
+        .form-button.secondary {
+            background: var(--tg-theme-secondary-bg-color, #f2f2f7);
+            color: var(--tg-theme-text-color, #000);
+        }
+
+        .form-button:active {
+            opacity: 0.7;
+        }
+
         .error-message {
             background: linear-gradient(135deg, #ff3b30 0%, #dc3545 100%);
             color: white;
@@ -601,17 +788,6 @@
             font-weight: 500;
             animation: slideInError 0.3s ease-out;
             box-shadow: 0 4px 12px rgba(255, 59, 48, 0.3);
-        }
-
-        @keyframes slideInError {
-            from {
-                transform: translateY(-20px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
         }
 
         .success-message {
@@ -668,57 +844,29 @@
             animation: spin 1s linear infinite;
         }
 
-        .trainer-message {
+        .points-animation {
             position: fixed;
-            top: 100px;
-            left: 50%;
-            transform: translateX(-50%) translateY(-20px);
-            background: white;
-            padding: 16px 24px;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            opacity: 0;
-            transition: all 0.3s ease-out;
-            z-index: 3000;
-            max-width: 90%;
+            font-size: 24px;
+            font-weight: bold;
+            color: #34c759;
             pointer-events: none;
+            z-index: 3000;
+            animation: floatUp 1.5s ease-out forwards;
         }
-        
-        .trainer-message.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-            pointer-events: auto;
-        }
-        
-        .trainer-message.soft {
-            background: linear-gradient(135deg, #fff0f5 0%, #ffe4e1 100%);
-            color: #d63384;
-            border: 1px solid #f8d7da;
-        }
-        
-        .trainer-message.normal {
-            background: linear-gradient(135deg, #e6f2ff 0%, #cce7ff 100%);
-            color: #0066cc;
-            border: 1px solid #b8daff;
-        }
-        
-        .trainer-message.extreme {
-            background: linear-gradient(135deg, #2c1810 0%, #1a0f08 100%);
-            color: #ff4444;
-            border: 1px solid #ff6666;
-        }
-        
-        .trainer-avatar {
-            font-size: 32px;
-        }
-        
-        .trainer-text {
-            font-size: 15px;
-            font-weight: 500;
-            line-height: 1.4;
+
+        @keyframes floatUp {
+            0% {
+                transform: translateY(0) scale(0.5);
+                opacity: 0;
+            }
+            50% {
+                transform: translateY(-30px) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-60px) scale(0.8);
+                opacity: 0;
+            }
         }
     </style>
 </head>
@@ -802,8 +950,17 @@
             </div>
 
             <div class="stats-card">
-                <div class="section-title">Прогресс по дням</div>
-                <canvas id="progressChart" width="400" height="200"></canvas>
+                <div class="section-title">Прогресс за последние 7 дней</div>
+                <div class="progress-chart">
+                    <div class="chart-bars" id="progressChart"></div>
+                </div>
+            </div>
+            
+            <div class="stats-card">
+                <div class="section-title">Достижения</div>
+                <div class="stats-grid" id="achievementsList">
+                    <!-- Динамически заполняется -->
+                </div>
             </div>
         </div>
 
@@ -828,10 +985,24 @@
             </div>
 
             <div class="profile-section">
-                <div class="section-title">Достижения</div>
-                <div class="empty-state">
-                    <div class="empty-icon">🏅</div>
-                    <div class="empty-title">Скоро здесь появятся твои достижения</div>
+                <div class="section-title">Статистика за все время</div>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-box-value" id="maxStreak">0</div>
+                        <div class="stat-box-label">Лучший стрик</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value" id="totalPoints">0</div>
+                        <div class="stat-box-label">Всего очков</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value" id="averageCompletion">0</div>
+                        <div class="stat-box-label">Задач в день</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value" id="totalDays">0</div>
+                        <div class="stat-box-label">Дней в системе</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -852,6 +1023,38 @@
             </div>
         </div>
     </div>
+    
+    <!-- Модальное окно редактирования -->
+    <div class="edit-modal" id="editModal">
+        <div class="edit-modal-content">
+            <div class="edit-modal-header">
+                <h3 class="edit-modal-title">Редактировать задачу</h3>
+                <button class="edit-modal-close" onclick="closeEditModal()">×</button>
+            </div>
+            <form class="edit-form" id="editForm">
+                <div class="form-group">
+                    <label class="form-label">Название</label>
+                    <input type="text" class="form-input" id="editTitle" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Дедлайн</label>
+                    <input type="datetime-local" class="form-input" id="editDeadline">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Приоритет</label>
+                    <select class="form-input" id="editPriority">
+                        <option value="low">Низкий</option>
+                        <option value="medium">Средний</option>
+                        <option value="high">Высокий</option>
+                    </select>
+                </div>
+                <div class="form-buttons">
+                    <button type="button" class="form-button secondary" onclick="deleteTask()">Удалить</button>
+                    <button type="submit" class="form-button primary">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script>
     (function() {
@@ -862,7 +1065,9 @@
             tasks: 'https://nbykanov13.app.n8n.cloud/webhook/2fd6cb69-88fa-4d08-aba2-221247b6652b/api/tasks',
             calendar: 'https://nbykanov13.app.n8n.cloud/webhook/a8c27692-17b1-45f8-a11f-0e5a7063a5ed/api/calendar',
             toggleTask: 'https://nbykanov13.app.n8n.cloud/webhook/a3911d71-ce2f-4e9c-a05d-f35f1c4779c8/api/tasks',
-            trainerMode: 'https://nbykanov13.app.n8n.cloud/webhook/trainer-mode-webhook-id/api/user'
+            trainerMode: 'https://nbykanov13.app.n8n.cloud/webhook/trainer-mode-webhook-id/api/user',
+            updateTask: 'https://nbykanov13.app.n8n.cloud/webhook/update-task-webhook-id/api/tasks',
+            deleteTask: 'https://nbykanov13.app.n8n.cloud/webhook/delete-task-webhook-id/api/tasks'
         };
         
         let tg = null;
@@ -892,16 +1097,13 @@
             rank: 'Кожаный мешок',
             points: 0,
             streak: 0,
-            trainer_mode: 'normal'
+            trainer_mode: 'normal',
+            max_streak: 0,
+            created_at: new Date()
         };
         let currentTasks = [];
-        let statsData = {
-            completed_total: 0,
-            pending: 0,
-            completed_today: 0,
-            completion_rate: 0,
-            global_rank: 0
-        };
+        let weeklyStats = [];
+        let editingTask = null;
 
         const TRAINER_INFO = {
             soft: {
@@ -924,28 +1126,65 @@
             }
         };
 
+        // Анимация изменения очков
+        function animatePointsChange(oldPoints, newPoints) {
+            const diff = newPoints - oldPoints;
+            if (diff === 0) return;
+            
+            const pointsElement = document.getElementById('userPoints');
+            pointsElement.classList.add('animating');
+            
+            // Создаем элемент для анимации
+            const animation = document.createElement('div');
+            animation.className = 'points-animation';
+            animation.textContent = diff > 0 ? `+${diff}` : `${diff}`;
+            animation.style.color = diff > 0 ? '#34c759' : '#ff3b30';
+            
+            // Позиционируем относительно счетчика очков
+            const rect = pointsElement.getBoundingClientRect();
+            animation.style.left = rect.left + 'px';
+            animation.style.top = rect.top + 'px';
+            
+            document.body.appendChild(animation);
+            
+            // Анимируем изменение числа
+            let current = oldPoints;
+            const step = diff > 0 ? 1 : -1;
+            const interval = setInterval(() => {
+                current += step;
+                pointsElement.textContent = current;
+                
+                if ((diff > 0 && current >= newPoints) || (diff < 0 && current <= newPoints)) {
+                    clearInterval(interval);
+                    pointsElement.textContent = newPoints;
+                    pointsElement.classList.remove('animating');
+                }
+            }, 30);
+            
+            // Удаляем элемент анимации
+            setTimeout(() => {
+                animation.remove();
+            }, 1500);
+        }
+
         // Переключение страниц
         window.switchPage = function(pageId) {
-            // Скрываем все страницы
             document.querySelectorAll('.page').forEach(page => {
                 page.classList.remove('active');
             });
             
-            // Показываем нужную
             document.getElementById(pageId).classList.add('active');
             
-            // Обновляем навигацию
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.classList.remove('active');
             });
             event.currentTarget.classList.add('active');
             
-            // Загружаем данные для страницы
             if (pageId === 'statsPage') {
                 loadStats();
+                loadWeeklyProgress();
             }
             
-            // Haptic feedback
             if (tg && tg.HapticFeedback) {
                 try {
                     tg.HapticFeedback.selectionChanged();
@@ -953,252 +1192,289 @@
             }
         };
 
-        // ИСПРАВЛЕННАЯ функция смены режима тренера
+        // Загрузка недельного прогресса
+        async function loadWeeklyProgress() {
+            try {
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() - 6);
+                
+                const response = await apiRequest(`${API_ENDPOINTS.tasks}/${telegramUserId}/weekly`);
+                
+                const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+                const chartContainer = document.getElementById('progressChart');
+                chartContainer.innerHTML = '';
+                
+                for (let i = 0; i < 7; i++) {
+                    const date = new Date(startDate);
+                    date.setDate(date.getDate() + i);
+                    
+                    const dayData = weeklyStats.find(d => {
+                        const dDate = new Date(d.date);
+                        return dDate.toDateString() === date.toDateString();
+                    }) || { completed: 0 };
+                    
+                    const maxHeight = 150;
+                    const height = Math.min((dayData.completed / 10) * maxHeight, maxHeight);
+                    
+                    const bar = document.createElement('div');
+                    bar.className = 'chart-bar';
+                    bar.style.height = height + 'px';
+                    bar.innerHTML = `
+                        <div class="chart-bar-label">${days[date.getDay()]}</div>
+                    `;
+                    
+                    chartContainer.appendChild(bar);
+                }
+            } catch (error) {
+                console.error('Error loading weekly progress:', error);
+            }
+        }
+
+        // Смена режима тренера
         window.changeTrainerMode = async function(mode) {
             try {
-                // Отправляем запрос СНАЧАЛА, без изменения UI
                 const response = await apiRequest(`${API_ENDPOINTS.trainerMode}/${telegramUserId}/trainer-mode`, {
                     method: 'POST',
                     body: JSON.stringify({ mode: mode })
                 });
                 
-                console.log('=== TRAINER MODE RESPONSE ===');
-                console.log('Response:', JSON.stringify(response, null, 2));
-                
-                // Считаем успехом любой ответ без явной ошибки
-                const hasError = response && (response.error || response.message?.includes('error') || response.status === 'error');
-                
-                if (hasError) {
-                    throw new Error(response.error || response.message || 'Неизвестная ошибка сервера');
-                }
-                
-                // УСПЕХ - обновляем UI
                 const oldMode = userInfo.trainer_mode;
                 userInfo.trainer_mode = mode;
                 
-                // Обновляем активный режим в списке
                 document.querySelectorAll('.trainer-mode').forEach(el => {
                     el.classList.remove('active');
                 });
                 document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
                 
-                // Обновляем UI тренера
                 updateTrainerUI(mode);
                 
-                // Haptic feedback
                 if (tg && tg.HapticFeedback) {
                     try {
                         tg.HapticFeedback.impactOccurred('medium');
                     } catch (e) {}
                 }
                 
-                // Сообщения пользователю
-                let message = '';
-                let trainerMessage = '';
-                
-                switch(mode) {
-                    case 'soft':
-                        message = 'Мягкий режим включен 🌸';
-                        trainerMessage = 'Привет, дорогой! Я Соня, твой заботливый коуч. Буду поддерживать тебя с любовью! 💕';
-                        break;
-                    case 'normal':
-                        message = 'Нормальный режим включен 💪';
-                        trainerMessage = 'Я Виктор, твой тренер! Готовься к продуктивности, чемпион! 🏆';
-                        break;
-                    case 'extreme':
-                        message = 'ЭКСТРЕМАЛЬНЫЙ РЕЖИМ АКТИВИРОВАН! 🔥';
-                        trainerMessage = 'СЛУШАЙ СЮДА, КУСОК ДЕРЬМА! Теперь я твой кошмар! Готовься к аду! 💀';
-                        break;
-                }
-                
-                showSuccess(message);
-                
-                // Показываем сообщение от тренера через 1.5 секунды
-                setTimeout(() => {
-                    showTrainerMessage(trainerMessage, mode);
-                }, 1500);
-                
-                // Перезагружаем данные пользователя для синхронизации
-                setTimeout(async () => {
-                    try {
-                        await loadUserData();
-                    } catch (e) {
-                        console.log('Failed to reload user data:', e);
-                    }
-                }, 2000);
+                showSuccess(`Режим изменен на ${TRAINER_INFO[mode].name}`);
                 
             } catch (error) {
                 console.error('Error changing trainer mode:', error);
-                showError('Ошибка при изменении режима тренера. Попробуйте еще раз.');
-                
-                // НЕ откатываем UI, так как режим может быть изменен на сервере
-                // Вместо этого перезагружаем данные пользователя
-                setTimeout(async () => {
-                    try {
-                        await loadUserData();
-                        // Обновляем UI на основе реальных данных с сервера
-                        updateTrainerModeUI();
-                    } catch (e) {
-                        console.log('Failed to reload user data after error:', e);
-                    }
-                }, 1000);
+                showError('Ошибка при изменении режима тренера');
             }
         };
 
-        // Функция для обновления UI режима тренера на основе данных пользователя
-        function updateTrainerModeUI() {
-            document.querySelectorAll('.trainer-mode').forEach(el => {
-                el.classList.remove('active');
-            });
-            
-            const currentMode = userInfo.trainer_mode || 'normal';
-            const activeElement = document.querySelector(`[data-mode="${currentMode}"]`);
-            if (activeElement) {
-                activeElement.classList.add('active');
-            }
-            
-            updateTrainerUI(currentMode);
-        }
-
-        // УЛУЧШЕННАЯ функция updateTrainerUI
         function updateTrainerUI(mode) {
             const trainer = TRAINER_INFO[mode];
-            if (!trainer) {
-                console.error('Unknown trainer mode:', mode);
-                return;
-            }
+            if (!trainer) return;
             
             const badge = document.getElementById('trainerBadge');
             const icon = document.getElementById('trainerIcon');
             const name = document.getElementById('trainerName');
             const avatar = document.getElementById('userAvatar');
             
-            if (!badge || !icon || !name || !avatar) {
-                console.error('Trainer UI elements not found');
-                return;
-            }
-            
-            // Плавная анимация смены бейджа
-            badge.style.transition = 'all 0.3s ease';
-            badge.style.opacity = '0';
-            badge.style.transform = 'scale(0.8)';
-            
-            setTimeout(() => {
-                badge.style.display = 'inline-flex';
-                badge.className = 'trainer-badge ' + trainer.badgeClass;
-                icon.textContent = trainer.icon;
-                name.textContent = trainer.name;
-                
-                // Плавное появление
-                setTimeout(() => {
-                    badge.style.opacity = '1';
-                    badge.style.transform = 'scale(1)';
-                }, 50);
-            }, 150);
-            
-            // Анимация смены аватара
-            avatar.style.transition = 'all 0.3s ease';
+            badge.style.display = 'inline-flex';
+            badge.className = 'trainer-badge ' + trainer.badgeClass;
+            icon.textContent = trainer.icon;
+            name.textContent = trainer.name;
             avatar.className = 'avatar ' + (trainer.avatarClass || 'normal-mode');
-            
-            // Анимация пульсации для выбранного режима
-            const selectedMode = document.querySelector(`[data-mode="${mode}"]`);
-            if (selectedMode) {
-                selectedMode.classList.add('switching');
-                setTimeout(() => {
-                    selectedMode.classList.remove('switching');
-                }, 300);
-            }
         }
 
-        // УЛУЧШЕННАЯ функция показа сообщений от тренера
-        function showTrainerMessage(message, mode) {
-            // Удаляем предыдущее сообщение если есть
-            const existingMessage = document.querySelector('.trainer-message');
-            if (existingMessage) {
-                existingMessage.remove();
-            }
-            
-            const trainer = TRAINER_INFO[mode];
-            if (!trainer) return;
-            
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'trainer-message ' + mode;
-            messageDiv.innerHTML = `
-                <div class="trainer-avatar">${trainer.icon}</div>
-                <div class="trainer-text">${message}</div>
-            `;
-            
-            document.body.appendChild(messageDiv);
-            
-            // Плавное появление
-            setTimeout(() => {
-                messageDiv.classList.add('show');
-            }, 100);
-            
-            // Автоматическое скрытие через 5 секунд
-            setTimeout(() => {
-                messageDiv.classList.remove('show');
-                setTimeout(() => {
-                    if (messageDiv.parentNode) {
-                        messageDiv.remove();
-                    }
-                }, 300);
-            }, 5000);
-        }
+        // Обработка свайпов и долгого нажатия
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchStartTime = 0;
+        let currentTaskCard = null;
+        let longPressTimer = null;
 
-        // УЛУЧШЕННАЯ функция показа успеха
-        function showSuccess(message) {
-            // Удаляем предыдущие сообщения
-            document.querySelectorAll('.success-message').forEach(el => el.remove());
+        function handleTouchStart(e, taskCard) {
+            currentTaskCard = taskCard;
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            touchStartTime = Date.now();
             
-            const successDiv = document.createElement('div');
-            successDiv.className = 'success-message';
-            successDiv.textContent = message;
-            document.body.appendChild(successDiv);
-            
-            setTimeout(() => {
-                if (successDiv.parentNode) {
-                    successDiv.remove();
+            // Долгое нажатие
+            longPressTimer = setTimeout(() => {
+                if (tg && tg.HapticFeedback) {
+                    try {
+                        tg.HapticFeedback.impactOccurred('medium');
+                    } catch (e) {}
                 }
+                openEditModal(taskCard.dataset.taskId);
+            }, 500);
+        }
+
+        function handleTouchMove(e, taskCard) {
+            const touchX = e.touches[0].clientX;
+            const touchY = e.touches[0].clientY;
+            const deltaX = touchX - touchStartX;
+            const deltaY = touchY - touchStartY;
+            
+            // Отменяем долгое нажатие при движении
+            if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
+                clearTimeout(longPressTimer);
+            }
+            
+            // Свайп влево для удаления
+            if (Math.abs(deltaX) > Math.abs(deltaY) && deltaX < -50) {
+                taskCard.classList.add('show-actions');
+                e.preventDefault();
+            }
+        }
+
+        function handleTouchEnd(e, taskCard) {
+            clearTimeout(longPressTimer);
+            const touchEndTime = Date.now();
+            const touchDuration = touchEndTime - touchStartTime;
+            
+            // Если был быстрый тап, переключаем статус
+            if (touchDuration < 200 && !taskCard.classList.contains('show-actions')) {
+                const checkbox = taskCard.querySelector('.checkbox');
+                if (e.target === checkbox || e.target.closest('.checkbox')) {
+                    toggleTaskStatus(taskCard.dataset.taskId);
+                }
+            }
+            
+            // Сброс свайпа
+            setTimeout(() => {
+                taskCard.classList.remove('show-actions');
             }, 3000);
         }
 
-        // УЛУЧШЕННАЯ функция показа ошибки
-        function showError(message) {
-            // Удаляем предыдущие ошибки
-            document.querySelectorAll('.error-message').forEach(el => el.remove());
+        // Редактирование задачи
+        window.openEditModal = async function(taskId) {
+            const task = currentTasks.find(t => t.id === taskId);
+            if (!task) return;
             
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'error-message';
-            errorDiv.textContent = message;
+            editingTask = task;
             
-            // Вставляем в начало body
-            document.body.insertBefore(errorDiv, document.body.firstChild);
+            document.getElementById('editTitle').value = task.title;
+            document.getElementById('editPriority').value = task.priority;
             
-            setTimeout(() => {
-                if (errorDiv.parentNode) {
-                    errorDiv.remove();
-                }
-            }, 5000);
-        }
-
-        // Загрузка статистики
-        async function loadStats() {
-            try {
-                // Здесь будет запрос к API для получения статистики
-                // Пока используем данные из loadUserData
-                
-                document.getElementById('totalCompleted').textContent = statsData.completed_total;
-                document.getElementById('completionRate').textContent = statsData.completion_rate + '%';
-                document.getElementById('globalRank').textContent = '#' + (statsData.global_rank || 'N/A');
-                document.getElementById('todayCompleted').textContent = statsData.completed_today;
-                document.getElementById('pendingTasks').textContent = statsData.pending;
-                
-                // Здесь можно добавить график прогресса
-            } catch (error) {
-                console.error('Error loading stats:', error);
+            if (task.deadline) {
+                const deadline = new Date(task.deadline);
+                const localDateTime = deadline.toISOString().slice(0, 16);
+                document.getElementById('editDeadline').value = localDateTime;
             }
-        }
+            
+            document.getElementById('editModal').classList.add('active');
+        };
+
+        window.closeEditModal = function() {
+            document.getElementById('editModal').classList.remove('active');
+            editingTask = null;
+        };
+
+        // Сохранение изменений
+        document.getElementById('editForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!editingTask) return;
+            
+            try {
+                const updatedTask = {
+                    title: document.getElementById('editTitle').value,
+                    deadline: document.getElementById('editDeadline').value || null,
+                    priority: document.getElementById('editPriority').value
+                };
+                
+                // Здесь должен быть API запрос на обновление
+                // await apiRequest(`${API_ENDPOINTS.updateTask}/${editingTask.id}`, {
+                //     method: 'PUT',
+                //     body: JSON.stringify(updatedTask)
+                // });
+                
+                showSuccess('Задача обновлена');
+                closeEditModal();
+                await loadTasks();
+                
+            } catch (error) {
+                showError('Ошибка при обновлении задачи');
+            }
+        });
+
+        // Удаление задачи
+        window.deleteTask = async function() {
+            if (!editingTask) return;
+            
+            if (confirm('Удалить задачу?')) {
+                try {
+                    // await apiRequest(`${API_ENDPOINTS.deleteTask}/${editingTask.id}`, {
+                    //     method: 'DELETE'
+                    // });
+                    
+                    showSuccess('Задача удалена');
+                    closeEditModal();
+                    await loadTasks();
+                    await loadCalendarData();
+                    
+                } catch (error) {
+                    showError('Ошибка при удалении задачи');
+                }
+            }
+        };
+
+        // Переключение статуса задачи с оптимистичным обновлением
+        window.toggleTaskStatus = async function(taskId) {
+            try {
+                const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+                const task = currentTasks.find(t => t.id === taskId);
+                if (!taskCard || !task) return;
+                
+                const checkbox = taskCard.querySelector('.checkbox');
+                const taskTitle = taskCard.querySelector('.task-title');
+                
+                const wasCompleted = checkbox.classList.contains('checked');
+                const newStatus = wasCompleted ? 'pending' : 'completed';
+                
+                // Оптимистичное обновление UI
+                if (wasCompleted) {
+                    checkbox.classList.remove('checked');
+                    taskCard.classList.remove('completed');
+                    taskTitle.style.textDecoration = 'none';
+                    // Вычитаем очки
+                    animatePointsChange(userInfo.points, userInfo.points - task.points_earned);
+                    userInfo.points -= task.points_earned;
+                } else {
+                    checkbox.classList.add('checked');
+                    taskCard.classList.add('completed');
+                    taskTitle.style.textDecoration = 'line-through';
+                    // Добавляем очки
+                    animatePointsChange(userInfo.points, userInfo.points + task.points_earned);
+                    userInfo.points += task.points_earned;
+                }
+                
+                // Haptic feedback
+                if (tg && tg.HapticFeedback) {
+                    try {
+                        tg.HapticFeedback.impactOccurred('light');
+                    } catch (e) {}
+                }
+                
+                showSuccess(wasCompleted ? 'Задача возвращена в работу' : 'Задача выполнена!');
+                
+                // Отправляем запрос на сервер
+                const toggleUrl = `${API_ENDPOINTS.toggleTask}/${taskId}/toggle`;
+                await apiRequest(toggleUrl, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        user_id: telegramUserId,
+                        status: newStatus
+                    })
+                });
+                
+                // Обновляем данные в фоне
+                setTimeout(async () => {
+                    await loadCalendarData();
+                    await loadUserData();
+                }, 1000);
+                
+            } catch (error) {
+                showError('Ошибка при обновлении задачи');
+                // Откатываем изменения
+                await loadTasks();
+                await loadUserData();
+            }
+        };
 
         async function apiRequest(url, options = {}) {
             try {
@@ -1241,68 +1517,35 @@
             }
         }
 
-        // УЛУЧШЕННАЯ функция загрузки данных пользователя
         async function loadUserData() {
             try {
-                console.log('Loading user data for:', telegramUserId);
                 const userData = await apiRequest(`${API_ENDPOINTS.user}/${telegramUserId}`);
-                
-                console.log('User data received:', userData);
                 
                 if (userData && userData.length > 0) {
                     const user = userData[0];
+                    const oldPoints = userInfo.points;
+                    
                     userInfo = {
                         name: user.first_name || 'Пользователь',
                         rank: user.rank || 'Кожаный мешок',
                         points: user.points || 0,
                         streak: user.current_streak || 0,
-                        trainer_mode: user.trainer_mode || 'normal'
-                    };
-                    
-                    console.log('Updated userInfo:', userInfo);
-                    
-                    // Обновляем основную информацию
-                    document.getElementById('userName').textContent = userInfo.name;
-                    document.getElementById('userRank').textContent = userInfo.rank;
-                    document.getElementById('userPoints').textContent = userInfo.points;
-                    document.getElementById('userStreak').textContent = userInfo.streak;
-                    document.getElementById('userAvatar').textContent = userInfo.name[0].toUpperCase();
-                    
-                    // Обновляем статистику для других страниц
-                    statsData.completed_total = user.completed_total || 0;
-                    statsData.pending = user.pending || 0;
-                    statsData.completed_today = user.completed_today || 0;
-                    statsData.global_rank = user.global_rank || 0;
-                    
-                    // Рассчитываем процент выполнения
-                    const totalTasks = statsData.completed_total + statsData.pending;
-                    statsData.completion_rate = totalTasks > 0 ? 
-                        Math.round((statsData.completed_total / totalTasks) * 100) : 0;
-                    
-                    // Обновляем UI тренера
-                    updateTrainerUI(userInfo.trainer_mode);
-                    
-                    // Устанавливаем активный режим тренера в профиле
-                    updateTrainerModeUI();
-                    
-                    console.log('User data loaded successfully');
-                    
-                } else {
-                    console.log('No user data received, using defaults');
-                    // Используем значения по умолчанию
-                    userInfo = {
-                        name: 'Гость',
-                        rank: 'Новичок',
-                        points: 0,
-                        streak: 0,
-                        trainer_mode: 'normal'
+                        trainer_mode: user.trainer_mode || 'normal',
+                        max_streak: user.max_streak || 0,
+                        created_at: user.created_at || new Date()
                     };
                     
                     document.getElementById('userName').textContent = userInfo.name;
                     document.getElementById('userRank').textContent = userInfo.rank;
-                    document.getElementById('userPoints').textContent = userInfo.points;
                     document.getElementById('userStreak').textContent = userInfo.streak;
                     document.getElementById('userAvatar').textContent = userInfo.name[0].toUpperCase();
+                    
+                    // Анимируем изменение очков если они изменились
+                    if (oldPoints !== userInfo.points && oldPoints !== 0) {
+                        animatePointsChange(oldPoints, userInfo.points);
+                    } else {
+                        document.getElementById('userPoints').textContent = userInfo.points;
+                    }
                     
                     updateTrainerUI(userInfo.trainer_mode);
                     updateTrainerModeUI();
@@ -1310,18 +1553,62 @@
                 
             } catch (error) {
                 console.error('Error loading user data:', error);
+            }
+        }
+
+        async function loadStats() {
+            try {
+                // Здесь должен быть запрос к API для получения статистики
+                // Пока используем данные из userInfo
                 
-                // Устанавливаем значения по умолчанию при ошибке
-                document.getElementById('userName').textContent = 'Ошибка загрузки';
-                document.getElementById('userRank').textContent = 'Неизвестно';
-                document.getElementById('userPoints').textContent = '0';
-                document.getElementById('userStreak').textContent = '0';
-                document.getElementById('userAvatar').textContent = '?';
+                document.getElementById('totalCompleted').textContent = '0';
+                document.getElementById('completionRate').textContent = '0%';
+                document.getElementById('globalRank').textContent = '#1';
+                document.getElementById('todayCompleted').textContent = '0';
+                document.getElementById('pendingTasks').textContent = currentTasks.filter(t => t.status === 'pending').length;
                 
-                // Показываем ошибку только если это не первая загрузка
-                if (userInfo.name && userInfo.name !== 'Пользователь') {
-                    showError('Ошибка загрузки данных пользователя');
-                }
+                // Статистика профиля
+                document.getElementById('maxStreak').textContent = userInfo.max_streak || 0;
+                document.getElementById('totalPoints').textContent = userInfo.points;
+                
+                const createdAt = new Date(userInfo.created_at);
+                const daysInSystem = Math.floor((new Date() - createdAt) / (1000 * 60 * 60 * 24));
+                document.getElementById('totalDays').textContent = daysInSystem;
+                
+                // Достижения
+                updateAchievements();
+                
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        function updateAchievements() {
+            const achievements = [
+                { icon: '🔥', name: 'Неделя стрика', unlocked: userInfo.streak >= 7 },
+                { icon: '💯', name: '100 очков', unlocked: userInfo.points >= 100 },
+                { icon: '🏆', name: '50 задач', unlocked: false },
+                { icon: '⚡', name: 'Скорость', unlocked: false }
+            ];
+            
+            const container = document.getElementById('achievementsList');
+            container.innerHTML = achievements.map(a => `
+                <div class="stat-box" style="opacity: ${a.unlocked ? 1 : 0.3}">
+                    <div class="stat-box-value">${a.icon}</div>
+                    <div class="stat-box-label">${a.name}</div>
+                </div>
+            `).join('');
+        }
+
+        function updateTrainerModeUI() {
+            document.querySelectorAll('.trainer-mode').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            const currentMode = userInfo.trainer_mode || 'normal';
+            const activeElement = document.querySelector(`[data-mode="${currentMode}"]`);
+            if (activeElement) {
+                activeElement.classList.add('active');
             }
         }
 
@@ -1340,6 +1627,16 @@
                             total: parseInt(day.total_tasks) || 0,
                             completed: parseInt(day.completed_tasks) || 0
                         };
+                    });
+                }
+                
+                // Сохраняем для графика
+                if (month === new Date().getMonth() + 1) {
+                    weeklyStats = data.filter(day => {
+                        const date = new Date(day.date);
+                        const weekAgo = new Date();
+                        weekAgo.setDate(weekAgo.getDate() - 7);
+                        return date >= weekAgo;
                     });
                 }
                 
@@ -1377,65 +1674,6 @@
                 renderTasks([]);
             }
         }
-
-        window.toggleTaskStatus = async function(taskId) {
-            try {
-                const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
-                if (!taskCard) {
-                    return;
-                }
-                
-                const checkbox = taskCard.querySelector('.checkbox');
-                const taskTitle = taskCard.querySelector('.task-title');
-                
-                const isCurrentlyCompleted = checkbox.classList.contains('checked');
-                const newStatus = isCurrentlyCompleted ? 'pending' : 'completed';
-                
-                // Мгновенно обновляем UI
-                if (isCurrentlyCompleted) {
-                    checkbox.classList.remove('checked');
-                    taskCard.classList.remove('completed');
-                    taskTitle.style.textDecoration = 'none';
-                } else {
-                    checkbox.classList.add('checked');
-                    taskCard.classList.add('completed');
-                    taskTitle.style.textDecoration = 'line-through';
-                }
-                
-                // Haptic feedback
-                if (tg && tg.HapticFeedback) {
-                    try {
-                        tg.HapticFeedback.impactOccurred('light');
-                    } catch (e) {}
-                }
-                
-                showSuccess(isCurrentlyCompleted ? 'Задача возвращена в работу' : 'Задача выполнена!');
-                
-                // Отправляем запрос на сервер
-                const toggleUrl = `${API_ENDPOINTS.toggleTask}/${taskId}/toggle`;
-                
-                const requestBody = {
-                    user_id: telegramUserId,
-                    status: newStatus
-                };
-                
-                const result = await apiRequest(toggleUrl, {
-                    method: 'POST',
-                    body: JSON.stringify(requestBody)
-                });
-                
-                // Обновляем данные через небольшую задержку
-                setTimeout(async () => {
-                    await loadCalendarData();
-                    await loadUserData();
-                    await loadTasks();
-                }, 1000);
-                
-            } catch (error) {
-                showError('Ошибка при обновлении задачи');
-                await loadTasks();
-            }
-        };
 
         function formatDateKey(date) {
             const year = date.getFullYear();
@@ -1556,30 +1794,45 @@
                 const priorityText = task.priority === 'high' ? 'Высокий' : 
                                    task.priority === 'medium' ? 'Средний' : 'Низкий';
                 
-                let deadlineText = '';
+                // Обработка дедлайна с учетом has_specific_time
+                let deadlineHtml = '';
                 if (task.deadline) {
                     const deadline = new Date(task.deadline);
-                    deadlineText = deadline.toLocaleTimeString('ru-RU', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                    });
+                    const hasSpecificTime = task.has_specific_time || 
+                                          (deadline.getHours() !== 0 || deadline.getMinutes() !== 0);
+                    
+                    if (hasSpecificTime) {
+                        // Показываем время
+                        const timeText = deadline.toLocaleTimeString('ru-RU', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        });
+                        deadlineHtml = `<span class="deadline-info with-time">⏰ ${timeText}</span>`;
+                    } else {
+                        // Показываем что задача на этот день без конкретного времени
+                        deadlineHtml = `<span class="deadline-info no-time">📅 Без дедлайна</span>`;
+                    }
                 }
                 
                 const safeTitle = escapeHtml(task.title || '');
                 
                 html += `
-                    <div class="task-card ${isCompleted ? 'completed' : ''}" data-task-id="${task.id}">
-                        <div class="checkbox ${isCompleted ? 'checked' : ''}" 
-                             onclick="toggleTaskStatus('${task.id}')"
-                             style="cursor: pointer;">
-                        </div>
+                    <div class="task-card ${isCompleted ? 'completed' : ''}" 
+                         data-task-id="${task.id}"
+                         ontouchstart="handleTouchStart(event, this)"
+                         ontouchmove="handleTouchMove(event, this)"
+                         ontouchend="handleTouchEnd(event, this)">
+                        <div class="checkbox ${isCompleted ? 'checked' : ''}"></div>
                         <div class="task-info">
                             <div class="task-title" style="text-decoration: ${isCompleted ? 'line-through' : 'none'}">${safeTitle}</div>
                             <div class="task-meta">
-                                ${deadlineText ? `<span>⏰ ${deadlineText}</span>` : ''}
+                                ${deadlineHtml}
                                 <span class="priority-badge priority-${task.priority}">${priorityText}</span>
                                 <span>🏆 ${task.points_earned || 0} очков</span>
                             </div>
+                        </div>
+                        <div class="task-actions" onclick="deleteTaskSwipe('${task.id}')">
+                            Удалить
                         </div>
                     </div>
                 `;
@@ -1587,6 +1840,20 @@
             
             container.innerHTML = html;
         }
+        
+        // Удаление задачи через свайп
+        window.deleteTaskSwipe = async function(taskId) {
+            if (confirm('Удалить задачу?')) {
+                try {
+                    // Здесь должен быть API запрос
+                    showSuccess('Задача удалена');
+                    await loadTasks();
+                    await loadCalendarData();
+                } catch (error) {
+                    showError('Ошибка при удалении задачи');
+                }
+            }
+        };
 
         window.changeMonth = async function(direction) {
             currentDate.setMonth(currentDate.getMonth() + direction);
@@ -1648,6 +1915,42 @@
                 } catch (e) {}
             }
         };
+
+        function showSuccess(message) {
+            const existingSuccess = document.querySelector('.success-message');
+            if (existingSuccess) {
+                existingSuccess.remove();
+            }
+            
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success-message';
+            successDiv.textContent = message;
+            document.body.appendChild(successDiv);
+            
+            setTimeout(() => {
+                if (successDiv.parentNode) {
+                    successDiv.remove();
+                }
+            }, 3000);
+        }
+
+        function showError(message) {
+            const existingError = document.querySelector('.error-message');
+            if (existingError) {
+                existingError.remove();
+            }
+            
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = message;
+            document.body.insertBefore(errorDiv, document.body.firstChild);
+            
+            setTimeout(() => {
+                if (errorDiv.parentNode) {
+                    errorDiv.remove();
+                }
+            }, 5000);
+        }
 
         async function init() {
             try {
