@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Task Warrior - Productivity App</title>
+    <title>Task Tracker Mini App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * {
@@ -26,7 +26,7 @@
         .app {
             min-height: 100vh;
             background: var(--tg-theme-secondary-bg-color, #f2f2f7);
-            padding-bottom: 70px;
+            padding-bottom: 70px; /* Место для bottom nav */
         }
 
         .header {
@@ -56,16 +56,10 @@
             color: white;
             font-weight: bold;
             font-size: 20px;
-            position: relative;
-            overflow: hidden;
         }
 
         .avatar.soft-mode {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        }
-
-        .avatar.normal-mode {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
 
         .avatar.extreme-mode {
@@ -177,22 +171,10 @@
         /* Страницы */
         .page {
             display: none;
-            animation: fadeIn 0.3s ease-out;
         }
 
         .page.active {
             display: block;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
 
         /* Страница профиля */
@@ -254,16 +236,10 @@
             transform: scale(0.98);
         }
 
-        .mode-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 4px;
-        }
-
         .mode-title {
             font-size: 16px;
             font-weight: 600;
+            margin-bottom: 4px;
         }
 
         .mode-description {
@@ -320,46 +296,6 @@
             font-size: 12px;
             color: var(--tg-theme-hint-color, #8e8e93);
             margin-top: 4px;
-        }
-
-        .achievement-section {
-            margin-top: 20px;
-        }
-
-        .achievement-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-top: 12px;
-        }
-
-        .achievement {
-            aspect-ratio: 1;
-            background: var(--tg-theme-secondary-bg-color, #f2f2f7);
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 12px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .achievement.unlocked {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .achievement-icon {
-            font-size: 32px;
-            margin-bottom: 4px;
-        }
-
-        .achievement-name {
-            font-size: 11px;
-            font-weight: 500;
-            text-align: center;
         }
 
         .calendar-section {
@@ -492,32 +428,7 @@
             display: flex;
             align-items: flex-start;
             gap: 12px;
-            transition: all 0.3s;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .task-card::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 4px;
-            height: 100%;
-            background: transparent;
-            transition: background 0.3s;
-        }
-
-        .task-card.priority-high::before {
-            background: #ff3b30;
-        }
-
-        .task-card.priority-medium::before {
-            background: #ff9500;
-        }
-
-        .task-card.priority-low::before {
-            background: #34c759;
+            transition: opacity 0.2s;
         }
 
         .task-card.completed {
@@ -576,12 +487,6 @@
             gap: 12px;
             font-size: 13px;
             color: var(--tg-theme-hint-color, #8e8e93);
-        }
-
-        .task-meta-item {
-            display: flex;
-            align-items: center;
-            gap: 4px;
         }
 
         .priority-badge {
@@ -770,41 +675,6 @@
             font-weight: 500;
             line-height: 1.4;
         }
-
-        .progress-section {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid var(--tg-theme-secondary-bg-color, #f2f2f7);
-        }
-
-        .progress-title {
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--tg-theme-hint-color, #8e8e93);
-            margin-bottom: 8px;
-        }
-
-        .progress-bar {
-            height: 8px;
-            background: var(--tg-theme-secondary-bg-color, #f2f2f7);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 4px;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #34c759 0%, #30d158 100%);
-            border-radius: 4px;
-            transition: width 0.3s ease-out;
-        }
-
-        .progress-stats {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-            color: var(--tg-theme-hint-color, #8e8e93);
-        }
     </style>
 </head>
 <body>
@@ -884,90 +754,39 @@
                         <div class="stat-box-label">В работе</div>
                     </div>
                 </div>
-
-                <div class="progress-section">
-                    <div class="progress-title">Прогресс недели</div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="weekProgress" style="width: 0%"></div>
-                    </div>
-                    <div class="progress-stats">
-                        <span id="weekCompletedCount">0 выполнено</span>
-                        <span id="weekTotalCount">0 всего</span>
-                    </div>
-                </div>
             </div>
 
             <div class="stats-card">
-                <div class="section-title">Достижения</div>
-                <div class="achievement-grid">
-                    <div class="achievement" id="ach1">
-                        <div class="achievement-icon">🌟</div>
-                        <div class="achievement-name">Первый шаг</div>
-                    </div>
-                    <div class="achievement" id="ach2">
-                        <div class="achievement-icon">🔥</div>
-                        <div class="achievement-name">Неделя огня</div>
-                    </div>
-                    <div class="achievement" id="ach3">
-                        <div class="achievement-icon">💯</div>
-                        <div class="achievement-name">Сотня</div>
-                    </div>
-                    <div class="achievement" id="ach4">
-                        <div class="achievement-icon">🏃</div>
-                        <div class="achievement-name">Марафонец</div>
-                    </div>
-                    <div class="achievement" id="ach5">
-                        <div class="achievement-icon">🎯</div>
-                        <div class="achievement-name">Снайпер</div>
-                    </div>
-                    <div class="achievement" id="ach6">
-                        <div class="achievement-icon">👑</div>
-                        <div class="achievement-name">Король</div>
-                    </div>
-                </div>
+                <div class="section-title">Прогресс по дням</div>
+                <canvas id="progressChart" width="400" height="200"></canvas>
             </div>
         </div>
 
         <!-- Страница профиля -->
         <div id="profilePage" class="page">
             <div class="profile-section">
-                <div class="section-title">Выбери своего тренера</div>
+                <div class="section-title">Режим тренера</div>
                 <div class="trainer-modes">
                     <div class="trainer-mode" data-mode="soft" onclick="changeTrainerMode('soft')">
-                        <div class="mode-header">
-                            <div class="mode-title">🌸 Соня - Мягкий коуч</div>
-                        </div>
-                        <div class="mode-description">Всегда поддержит и поверит в тебя</div>
+                        <div class="mode-title">🌸 Мягкий</div>
+                        <div class="mode-description">Деликатные напоминания без давления</div>
                     </div>
                     <div class="trainer-mode active" data-mode="normal" onclick="changeTrainerMode('normal')">
-                        <div class="mode-header">
-                            <div class="mode-title">💪 Виктор - Тренер</div>
-                        </div>
-                        <div class="mode-description">Мотивирует и не даст расслабиться</div>
+                        <div class="mode-title">💪 Нормальный</div>
+                        <div class="mode-description">Мотивирующий тренер с юмором</div>
                     </div>
                     <div class="trainer-mode" data-mode="extreme" onclick="changeTrainerMode('extreme')">
-                        <div class="mode-header">
-                            <div class="mode-title">💀 Генерал Жестков</div>
-                        </div>
-                        <div class="mode-description">Заставит работать на пределе</div>
+                        <div class="mode-title">🔥 Экстремальный</div>
+                        <div class="mode-description">Жесткий режим без поблажек</div>
                     </div>
                 </div>
             </div>
 
             <div class="profile-section">
-                <div class="section-title">Настройки уведомлений</div>
+                <div class="section-title">Достижения</div>
                 <div class="empty-state">
-                    <div class="empty-icon">🔔</div>
-                    <div class="empty-title">Скоро появятся настройки</div>
-                    <div class="empty-subtitle">Пока твой тренер решает сам</div>
-                </div>
-            </div>
-
-            <div class="profile-section">
-                <div class="section-title">О приложении</div>
-                <div style="text-align: center; color: var(--tg-theme-hint-color, #8e8e93); font-size: 14px;">
-                    <p>Task Warrior v1.0</p>
-                    <p style="margin-top: 8px;">Сделано с ❤️ для продуктивных воинов</p>
+                    <div class="empty-icon">🏅</div>
+                    <div class="empty-title">Скоро здесь появятся твои достижения</div>
                 </div>
             </div>
         </div>
@@ -1034,12 +853,9 @@
         let statsData = {
             completed_total: 0,
             pending: 0,
-            failed: 0,
             completed_today: 0,
             completion_rate: 0,
-            global_rank: 0,
-            completed_week: 0,
-            total_week: 0
+            global_rank: 0
         };
 
         const TRAINER_INFO = {
@@ -1065,21 +881,26 @@
 
         // Переключение страниц
         window.switchPage = function(pageId) {
+            // Скрываем все страницы
             document.querySelectorAll('.page').forEach(page => {
                 page.classList.remove('active');
             });
             
+            // Показываем нужную
             document.getElementById(pageId).classList.add('active');
             
+            // Обновляем навигацию
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.classList.remove('active');
             });
             event.currentTarget.classList.add('active');
             
+            // Загружаем данные для страницы
             if (pageId === 'statsPage') {
                 loadStats();
             }
             
+            // Haptic feedback
             if (tg && tg.HapticFeedback) {
                 try {
                     tg.HapticFeedback.selectionChanged();
@@ -1124,7 +945,6 @@
                     }
                     
                     showSuccess(message);
-                    
                     setTimeout(() => {
                         showTrainerMessage(trainerMessage, mode);
                     }, 1500);
@@ -1143,6 +963,8 @@
         
         function updateTrainerUI(mode) {
             const trainer = TRAINER_INFO[mode];
+            if (!trainer) return;
+            
             const badge = document.getElementById('trainerBadge');
             const icon = document.getElementById('trainerIcon');
             const name = document.getElementById('trainerName');
@@ -1153,6 +975,7 @@
             icon.textContent = trainer.icon;
             name.textContent = trainer.name;
             
+            // Обновляем класс аватара
             avatar.className = 'avatar ' + trainer.avatarClass;
         }
         
@@ -1178,55 +1001,18 @@
         // Загрузка статистики
         async function loadStats() {
             try {
+                // Здесь будет запрос к API для получения статистики
+                // Пока используем данные из loadUserData
+                
                 document.getElementById('totalCompleted').textContent = statsData.completed_total;
                 document.getElementById('completionRate').textContent = statsData.completion_rate + '%';
                 document.getElementById('globalRank').textContent = '#' + (statsData.global_rank || 'N/A');
                 document.getElementById('todayCompleted').textContent = statsData.completed_today;
                 document.getElementById('pendingTasks').textContent = statsData.pending;
                 
-                // Прогресс недели
-                const weekProgress = statsData.total_week > 0 ? 
-                    Math.round((statsData.completed_week / statsData.total_week) * 100) : 0;
-                document.getElementById('weekProgress').style.width = weekProgress + '%';
-                document.getElementById('weekCompletedCount').textContent = statsData.completed_week + ' выполнено';
-                document.getElementById('weekTotalCount').textContent = statsData.total_week + ' всего';
-                
-                // Достижения
-                updateAchievements();
+                // Здесь можно добавить график прогресса
             } catch (error) {
                 console.error('Error loading stats:', error);
-            }
-        }
-
-        function updateAchievements() {
-            // Первый шаг - выполнена первая задача
-            if (statsData.completed_total >= 1) {
-                document.getElementById('ach1').classList.add('unlocked');
-            }
-            
-            // Неделя огня - стрик 7 дней
-            if (userInfo.streak >= 7) {
-                document.getElementById('ach2').classList.add('unlocked');
-            }
-            
-            // Сотня - 100 очков
-            if (userInfo.points >= 100) {
-                document.getElementById('ach3').classList.add('unlocked');
-            }
-            
-            // Марафонец - 50 выполненных задач
-            if (statsData.completed_total >= 50) {
-                document.getElementById('ach4').classList.add('unlocked');
-            }
-            
-            // Снайпер - 90% выполнения
-            if (statsData.completion_rate >= 90) {
-                document.getElementById('ach5').classList.add('unlocked');
-            }
-            
-            // Король - 1000 очков
-            if (userInfo.points >= 1000) {
-                document.getElementById('ach6').classList.add('unlocked');
             }
         }
 
@@ -1334,30 +1120,14 @@
                 const data = await apiRequest(`${API_ENDPOINTS.calendar}/${telegramUserId}/${year}/${month}`);
                 
                 calendarData = {};
-                let weekCompleted = 0;
-                let weekTotal = 0;
-                
                 if (Array.isArray(data)) {
-                    const weekAgo = new Date();
-                    weekAgo.setDate(weekAgo.getDate() - 7);
-                    
                     data.forEach(day => {
                         const dateKey = formatDateKey(new Date(day.date));
                         calendarData[dateKey] = {
                             total: parseInt(day.total_tasks) || 0,
                             completed: parseInt(day.completed_tasks) || 0
                         };
-                        
-                        // Считаем статистику за неделю
-                        const dayDate = new Date(day.date);
-                        if (dayDate >= weekAgo) {
-                            weekTotal += parseInt(day.total_tasks) || 0;
-                            weekCompleted += parseInt(day.completed_tasks) || 0;
-                        }
                     });
-                    
-                    statsData.completed_week = weekCompleted;
-                    statsData.total_week = weekTotal;
                 }
                 
                 renderCalendar();
@@ -1385,33 +1155,6 @@
                         allTasks = [response];
                     }
                 }
-                
-                // Обновляем статистику
-                let completed = 0;
-                let pending = 0;
-                let failed = 0;
-                let todayCompleted = 0;
-                const today = formatDateKey(new Date());
-                
-                allTasks.forEach(task => {
-                    if (task.status === 'completed') {
-                        completed++;
-                        if (formatDateKey(new Date(task.completed_at)) === today) {
-                            todayCompleted++;
-                        }
-                    } else if (task.status === 'pending') {
-                        pending++;
-                    } else if (task.status === 'failed') {
-                        failed++;
-                    }
-                });
-                
-                statsData.completed_total = completed;
-                statsData.pending = pending;
-                statsData.failed = failed;
-                statsData.completed_today = todayCompleted;
-                statsData.completion_rate = (completed + pending + failed) > 0 ? 
-                    Math.round((completed / (completed + pending + failed)) * 100) : 0;
                 
                 renderTasks(allTasks);
                 
@@ -1453,23 +1196,7 @@
                     } catch (e) {}
                 }
                 
-                // Сообщение от тренера
-                let trainerReaction = '';
-                if (newStatus === 'completed') {
-                    switch(userInfo.trainer_mode) {
-                        case 'soft':
-                            trainerReaction = 'Молодец! Я так горжусь тобой! 🌸';
-                            break;
-                        case 'normal':
-                            trainerReaction = 'Отлично, чемпион! Так держать! 💪';
-                            break;
-                        case 'extreme':
-                            trainerReaction = 'НАКОНЕЦ-ТО! Хоть что-то сделал! 💀';
-                            break;
-                    }
-                }
-                
-                showSuccess(trainerReaction || 'Задача обновлена!');
+                showSuccess(isCurrentlyCompleted ? 'Задача возвращена в работу' : 'Задача выполнена!');
                 
                 // Отправляем запрос на сервер
                 const toggleUrl = `${API_ENDPOINTS.toggleTask}/${taskId}/toggle`;
@@ -1492,7 +1219,7 @@
                 }, 1000);
                 
             } catch (error) {
-                showError('Ошибка при обновлении данных');ении задачи');
+                showError('Ошибка при обновлении задачи');
                 await loadTasks();
             }
         };
@@ -1628,7 +1355,7 @@
                 const safeTitle = escapeHtml(task.title || '');
                 
                 html += `
-                    <div class="task-card ${isCompleted ? 'completed' : ''} priority-${task.priority}" data-task-id="${task.id}">
+                    <div class="task-card ${isCompleted ? 'completed' : ''}" data-task-id="${task.id}">
                         <div class="checkbox ${isCompleted ? 'checked' : ''}" 
                              onclick="toggleTaskStatus('${task.id}')"
                              style="cursor: pointer;">
@@ -1636,14 +1363,9 @@
                         <div class="task-info">
                             <div class="task-title" style="text-decoration: ${isCompleted ? 'line-through' : 'none'}">${safeTitle}</div>
                             <div class="task-meta">
-                                ${deadlineText ? `<div class="task-meta-item"><span>⏰</span><span>${deadlineText}</span></div>` : ''}
-                                <div class="task-meta-item">
-                                    <span class="priority-badge priority-${task.priority}">${priorityText}</span>
-                                </div>
-                                <div class="task-meta-item">
-                                    <span>🏆</span>
-                                    <span>${task.points_earned || 0} очков</span>
-                                </div>
+                                ${deadlineText ? `<span>⏰ ${deadlineText}</span>` : ''}
+                                <span class="priority-badge priority-${task.priority}">${priorityText}</span>
+                                <span>🏆 ${task.points_earned || 0} очков</span>
                             </div>
                         </div>
                     </div>
@@ -1700,20 +1422,69 @@
                     loadCalendarData(),
                     loadTasks()
                 ]);
-                
-                // Сообщение от тренера
-                let message = '';
-                switch(userInfo.trainer_mode) {
-                    case 'soft':
-                        message = 'Обновила для тебя данные! 🌸';
-                        break;
-                    case 'normal':
-                        message = 'Данные обновлены, чемпион! 💪';
-                        break;
-                    case 'extreme':
-                        message = 'ОБНОВЛЕНО! Теперь РАБОТАЙ! 💀';
-                        break;
-                }
-                showSuccess(message);
+                showSuccess('Данные обновлены');
             } catch (error) {
-                showError('Ошибка при обновл
+                showError('Ошибка при обновлении данных');
+            } finally {
+                refreshBtn.classList.remove('spinning');
+            }
+            
+            if (tg && tg.HapticFeedback && typeof tg.HapticFeedback.impactOccurred === 'function') {
+                try {
+                    tg.HapticFeedback.impactOccurred('light');
+                } catch (e) {}
+            }
+        };
+
+        async function init() {
+            try {
+                renderCalendar();
+                
+                const container = document.getElementById('tasksList');
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">⏳</div>
+                        <div class="empty-title">Загружаем данные...</div>
+                    </div>
+                `;
+                
+                await loadUserData();
+                await loadCalendarData();
+                await loadTasks();
+                
+            } catch (error) {
+                console.error('Critical initialization error:', error);
+                showError('Ошибка при загрузке данных');
+                
+                const container = document.getElementById('tasksList');
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">❌</div>
+                        <div class="empty-title">Ошибка загрузки</div>
+                        <div class="empty-subtitle">Попробуйте обновить страницу</div>
+                    </div>
+                `;
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+
+        if (tg) {
+            tg.onEvent('themeChanged', function() {
+                document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#ffffff');
+                document.documentElement.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color || '#000000');
+                document.documentElement.style.setProperty('--tg-theme-hint-color', tg.themeParams.hint_color || '#8e8e93');
+                document.documentElement.style.setProperty('--tg-theme-link-color', tg.themeParams.link_color || '#007aff');
+                document.documentElement.style.setProperty('--tg-theme-button-color', tg.themeParams.button_color || '#007aff');
+                document.documentElement.style.setProperty('--tg-theme-button-text-color', tg.themeParams.button_text_color || '#ffffff');
+                document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', tg.themeParams.secondary_bg_color || '#f2f2f7');
+            });
+        }
+    })();
+    </script>
+</body>
+</html>
