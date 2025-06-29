@@ -56,6 +56,7 @@
             color: white;
             font-weight: bold;
             font-size: 20px;
+            transition: all 0.3s ease;
         }
 
         .avatar.soft-mode {
@@ -91,6 +92,9 @@
             font-size: 12px;
             font-weight: 500;
             margin-top: 4px;
+            transition: all 0.3s ease;
+            opacity: 1;
+            transform: scale(1);
         }
 
         .trainer-badge.soft {
@@ -204,9 +208,10 @@
             border-radius: 12px;
             border: 2px solid var(--tg-theme-secondary-bg-color, #f2f2f7);
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
+            transform: scale(1);
         }
 
         .trainer-mode::before {
@@ -225,6 +230,7 @@
         .trainer-mode.active {
             border-color: var(--tg-theme-button-color, #007aff);
             background: rgba(0, 122, 255, 0.05);
+            transform: scale(1.02);
         }
 
         .trainer-mode.active::before {
@@ -234,6 +240,16 @@
 
         .trainer-mode:active {
             transform: scale(0.98);
+        }
+        
+        .trainer-mode.switching {
+            animation: pulse 0.3s ease-out;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
 
         .mode-title {
@@ -910,6 +926,24 @@
 
         // Изменение режима тренера
         window.changeTrainerMode = async function(mode) {
+            // Сразу обновляем UI оптимистично
+            document.querySelectorAll('.trainer-mode').forEach(el => {
+                el.classList.remove('active');
+            });
+            document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+            
+            // Обновляем локальную переменную
+            const oldMode = userInfo.trainer_mode;
+            userInfo.trainer_mode = mode;
+            updateTrainerUI(mode);
+            
+            // Визуальная обратная связь
+            if (tg && tg.HapticFeedback) {
+                try {
+                    tg.HapticFeedback.impactOccurred('medium');
+                } catch (e) {}
+            }
+            
             try {
                 const response = await apiRequest(`${API_ENDPOINTS.trainerMode}/${telegramUserId}/trainer-mode`, {
                     method: 'POST',
@@ -917,15 +951,6 @@
                 });
                 
                 if (response.success) {
-                    // Обновляем UI
-                    document.querySelectorAll('.trainer-mode').forEach(el => {
-                        el.classList.remove('active');
-                    });
-                    document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
-                    
-                    userInfo.trainer_mode = mode;
-                    updateTrainerUI(mode);
-                    
                     let message = '';
                     let trainerMessage = '';
                     
@@ -948,15 +973,21 @@
                     setTimeout(() => {
                         showTrainerMessage(trainerMessage, mode);
                     }, 1500);
-                    
-                    if (tg && tg.HapticFeedback) {
-                        try {
-                            tg.HapticFeedback.impactOccurred('medium');
-                        } catch (e) {}
-                    }
+                } else {
+                    throw new Error('Не удалось изменить режим');
                 }
             } catch (error) {
                 console.error('Error changing trainer mode:', error);
+                
+                // Откатываем изменения UI при ошибке
+                userInfo.trainer_mode = oldMode;
+                updateTrainerUI(oldMode);
+                
+                document.querySelectorAll('.trainer-mode').forEach(el => {
+                    el.classList.remove('active');
+                });
+                document.querySelector(`[data-mode="${oldMode}"]`)?.classList.add('active');
+                
                 showError('Ошибка при изменении режима');
             }
         };
@@ -970,13 +1001,36 @@
             const name = document.getElementById('trainerName');
             const avatar = document.getElementById('userAvatar');
             
-            badge.style.display = 'inline-flex';
-            badge.className = 'trainer-badge ' + trainer.badgeClass;
-            icon.textContent = trainer.icon;
-            name.textContent = trainer.name;
+            // Анимация появления бейджа
+            badge.style.opacity = '0';
+            badge.style.transform = 'scale(0.8)';
             
-            // Обновляем класс аватара
+            setTimeout(() => {
+                badge.style.display = 'inline-flex';
+                badge.className = 'trainer-badge ' + trainer.badgeClass;
+                icon.textContent = trainer.icon;
+                name.textContent = trainer.name;
+                
+                // Плавное появление
+                setTimeout(() => {
+                    badge.style.transition = 'all 0.3s ease';
+                    badge.style.opacity = '1';
+                    badge.style.transform = 'scale(1)';
+                }, 50);
+            }, 100);
+            
+            // Анимация смены аватара
+            avatar.style.transition = 'all 0.3s ease';
             avatar.className = 'avatar ' + trainer.avatarClass;
+            
+            // Анимация пульсации для выбранного режима
+            const selectedMode = document.querySelector(`[data-mode="${mode}"]`);
+            if (selectedMode) {
+                selectedMode.classList.add('switching');
+                setTimeout(() => {
+                    selectedMode.classList.remove('switching');
+                }, 300);
+            }
         }
         
         function showTrainerMessage(message, mode) {
