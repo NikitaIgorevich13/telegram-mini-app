@@ -1565,10 +1565,15 @@
                 
                 // Отправляем запрос с action в URL
                 const actionUrl = `${API_ENDPOINTS.toggleTask}/${action}`;
+                debugLog(`Sending request to: ${actionUrl}`, 'info');
+                debugLog(`Request body: ${JSON.stringify(requestBody)}`, 'info');
+                
                 const response = await apiRequest(actionUrl, {
                     method: 'POST',
                     body: JSON.stringify(requestBody)
                 });
+                
+                debugLog(`Response received: ${JSON.stringify(response)}`, 'info');
                 
                 debugLog(`Task ${action} completed successfully`, 'success');
                 
