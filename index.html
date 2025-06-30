@@ -1381,6 +1381,52 @@
                 return text.replace(/[&<>"']/g, m => map[m]);
             },
             
+            // Форматирование времени с учетом часового пояса
+            formatLocalTime(dateString) {
+                if (!dateString) return '';
+                
+                // Создаем дату из строки (она приходит в UTC)
+                const date = new Date(dateString);
+                
+                // Проверяем, не является ли дата невалидной
+                if (isNaN(date.getTime())) return '';
+                
+                // Используем toLocaleTimeString для автоматического учета часового пояса пользователя
+                return date.toLocaleTimeString('ru-RU', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
+            },
+            
+            // Конвертация локального времени в UTC для отправки на сервер
+            convertToUTC(localDateTimeString) {
+                if (!localDateTimeString) return null;
+                
+                // localDateTimeString приходит из input datetime-local в формате YYYY-MM-DDTHH:mm
+                const date = new Date(localDateTimeString);
+                
+                // Возвращаем ISO строку (автоматически в UTC)
+                return date.toISOString();
+            },
+            
+            // Конвертация UTC времени в локальное для input datetime-local
+            convertToLocal(utcDateString) {
+                if (!utcDateString) return '';
+                
+                const date = new Date(utcDateString);
+                
+                // Получаем компоненты даты в локальном времени
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                
+                // Возвращаем в формате для datetime-local input
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            },
+            
             debounce(func, wait) {
                 let timeout;
                 return function executedFunction(...args) {
@@ -1894,13 +1940,8 @@
                 
                 let deadlineText = '';
                 if (task.deadline) {
-                    const deadline = new Date(task.deadline);
-                    // Корректируем время для локального часового пояса
-                    deadlineText = deadline.toLocaleTimeString('ru-RU', { 
-                        hour: '2-digit', 
-                        minute: '2-digit',
-                        timeZone: 'Europe/Sofia' // Или используйте ваш часовой пояс
-                    });
+                    // Используем новую функцию для правильного отображения времени
+                    deadlineText = utils.formatLocalTime(task.deadline);
                 }
                 
                 const safeTitle = utils.escapeHtml(task.title || '');
@@ -2161,8 +2202,8 @@
                 document.getElementById('editDifficulty').value = task.difficulty || 'medium';
                 
                 if (task.deadline) {
-                    const deadline = new Date(task.deadline);
-                    const localDateTime = deadline.toISOString().slice(0, 16);
+                    // Конвертируем UTC время в локальное для input
+                    const localDateTime = utils.convertToLocal(task.deadline);
                     document.getElementById('editDeadline').value = localDateTime;
                 }
                 
@@ -2184,7 +2225,11 @@
                 try {
                     // Сохраняем обновленные данные
                     state.editingTask.title = document.getElementById('editTitle').value;
-                    state.editingTask.deadline = document.getElementById('editDeadline').value || null;
+                    
+                    // Конвертируем локальное время в UTC перед отправкой
+                    const localDeadline = document.getElementById('editDeadline').value;
+                    state.editingTask.deadline = localDeadline ? utils.convertToUTC(localDeadline) : null;
+                    
                     state.editingTask.priority = document.getElementById('editPriority').value;
                     state.editingTask.difficulty = document.getElementById('editDifficulty').value;
                     state.editingTask.has_specific_time = !!document.getElementById('editDeadline').value;
