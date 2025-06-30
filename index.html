@@ -1136,10 +1136,10 @@
             user: `${API_BASE}/ec48838c-e168-4f0e-bf66-054d59e0275a/api/user`,
             tasks: `${API_BASE}/2fd6cb69-88fa-4d08-aba2-221247b6652b/api/tasks`,
             calendar: `${API_BASE}/a8c27692-17b1-45f8-a11f-0e5a7063a5ed/api/calendar`,
-            // ВАЖНО: Используем единый endpoint для всех операций с задачами
-            taskOperations: `${API_BASE}/a3911d71-ce2f-4e9c-a05d-f35f1c4779c8/api/tasks`,
-            trainerMode: `${API_BASE}/trainer-mode-webhook-id/api/user`,
-            weeklyStats: `${API_BASE}/weekly-stats-webhook-id/api/tasks`
+            // ИСПРАВЛЕНО: Правильный endpoint без ID для операций с задачами
+            taskOperations: `${API_BASE}/api/tasks`,
+            trainerMode: `${API_BASE}/api/user/trainer-mode`,
+            weeklyStats: `${API_BASE}/api/tasks/weekly`
         };
         
         // Инициализация Telegram WebApp
