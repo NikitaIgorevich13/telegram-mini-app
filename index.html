@@ -1286,8 +1286,9 @@
             calendar: `${API_BASE}/a8c27692-17b1-45f8-a11f-0e5a7063a5ed/api/calendar`,
             // ИСПРАВЛЕНО: Правильный endpoint без ID для операций с задачами
             taskOperations: `${API_BASE}/api/tasks`,
-            trainerMode: `${API_BASE}/api/user/trainer-mode`,
-            weeklyStats: `${API_BASE}/api/tasks/weekly`
+            // ВРЕМЕННО ОТКЛЮЧАЕМ неработающие endpoints
+            trainerMode: `${API_BASE}/trainer-mode-webhook-id/api/user`, // Нужно создать в n8n
+            weeklyStats: `${API_BASE}/weekly-stats-webhook-id/api/tasks` // Нужно создать в n8n
         };
         
         // Инициализация Telegram WebApp
