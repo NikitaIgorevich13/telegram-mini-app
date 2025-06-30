@@ -936,6 +936,141 @@
             font-size: 11px;
             cursor: pointer;
         }
+
+        /* Панель тестирования вебхуков */
+        .webhook-test-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--tg-theme-bg-color, #ffffff);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            z-index: 3000;
+            display: none;
+        }
+
+        .webhook-test-panel.active {
+            display: block;
+        }
+
+        .webhook-test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .webhook-test-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .webhook-test-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: var(--tg-theme-secondary-bg-color, #f2f2f7);
+            border-radius: 16px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .webhook-test-item {
+            margin-bottom: 16px;
+            padding: 16px;
+            background: var(--tg-theme-secondary-bg-color, #f2f2f7);
+            border-radius: 12px;
+        }
+
+        .webhook-test-name {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .webhook-test-url {
+            font-size: 12px;
+            color: var(--tg-theme-hint-color, #8e8e93);
+            word-break: break-all;
+            margin-bottom: 8px;
+        }
+
+        .webhook-test-status {
+            font-size: 14px;
+            font-weight: 500;
+            padding: 4px 8px;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .webhook-test-status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .webhook-test-status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .webhook-test-status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .webhook-test-button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 8px;
+            border: none;
+            border-radius: 8px;
+            background: var(--tg-theme-button-color, #007aff);
+            color: var(--tg-theme-button-text-color, white);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .webhook-test-response {
+            margin-top: 12px;
+            padding: 12px;
+            background: var(--tg-theme-bg-color, #ffffff);
+            border-radius: 8px;
+            font-size: 12px;
+            font-family: monospace;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .test-webhooks-btn {
+            position: fixed;
+            bottom: 200px;
+            right: 24px;
+            width: 40px;
+            height: 40px;
+            background: #9c27b0;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(156, 39, 176, 0.3);
+            cursor: pointer;
+            z-index: 901;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .test-webhooks-btn:active {
+            transform: scale(0.9);
+        }
     </style>
 </head>
 <body>
@@ -988,6 +1123,7 @@
 
             <button class="fab" onclick="app.addNewTask()">+</button>
             <button class="debug-toggle" onclick="app.toggleDebug()">DBG</button>
+            <button class="test-webhooks-btn" onclick="app.openWebhookTest()">🔧</button>
         </div>
 
         <!-- Страница статистики -->
@@ -1123,6 +1259,18 @@
                 </div>
             </form>
         </div>
+    </div>
+
+    <!-- Панель тестирования вебхуков -->
+    <div class="webhook-test-panel" id="webhookTestPanel">
+        <div class="webhook-test-header">
+            <h3 class="webhook-test-title">Тестирование вебхуков</h3>
+            <button class="webhook-test-close" onclick="app.closeWebhookTest()">×</button>
+        </div>
+        <div id="webhookTestContent">
+            <!-- Контент будет сгенерирован динамически -->
+        </div>
+        <button class="webhook-test-button" onclick="app.testAllWebhooks()">Проверить все вебхуки</button>
     </div>
 
     <script>
@@ -2095,6 +2243,163 @@
             }
         };
 
+        // Функции тестирования вебхуков
+        const webhookTest = {
+            webhooks: [
+                {
+                    name: 'User API',
+                    url: API_ENDPOINTS.user,
+                    testUrl: (id) => `${API_ENDPOINTS.user}/${id}`,
+                    method: 'GET',
+                    requiresId: true
+                },
+                {
+                    name: 'Tasks API',
+                    url: API_ENDPOINTS.tasks,
+                    testUrl: (id, date) => `${API_ENDPOINTS.tasks}/${id}/${date}`,
+                    method: 'GET',
+                    requiresId: true,
+                    requiresDate: true
+                },
+                {
+                    name: 'Calendar API',
+                    url: API_ENDPOINTS.calendar,
+                    testUrl: (id) => {
+                        const now = new Date();
+                        return `${API_ENDPOINTS.calendar}/${id}/${now.getFullYear()}/${now.getMonth() + 1}`;
+                    },
+                    method: 'GET',
+                    requiresId: true
+                },
+                {
+                    name: 'Task Operations API',
+                    url: API_ENDPOINTS.taskOperations,
+                    testUrl: () => API_ENDPOINTS.taskOperations,
+                    method: 'POST',
+                    testBody: {
+                        user_id: telegramUserId,
+                        action: 'test',
+                        task_id: 'test-id'
+                    }
+                },
+                {
+                    name: 'Trainer Mode API',
+                    url: API_ENDPOINTS.trainerMode,
+                    testUrl: (id) => `${API_ENDPOINTS.trainerMode.replace('/trainer-mode', '')}/${id}/trainer-mode`,
+                    method: 'POST',
+                    requiresId: true,
+                    testBody: {
+                        mode: 'normal'
+                    }
+                },
+                {
+                    name: 'Weekly Stats API',
+                    url: API_ENDPOINTS.weeklyStats,
+                    testUrl: (id) => `${API_ENDPOINTS.weeklyStats.replace('/weekly', '')}/${id}/weekly`,
+                    method: 'GET',
+                    requiresId: true
+                }
+            ],
+            
+            openPanel() {
+                document.getElementById('webhookTestPanel').classList.add('active');
+                this.renderWebhooks();
+            },
+            
+            closePanel() {
+                document.getElementById('webhookTestPanel').classList.remove('active');
+            },
+            
+            renderWebhooks() {
+                const content = document.getElementById('webhookTestContent');
+                content.innerHTML = this.webhooks.map((webhook, index) => `
+                    <div class="webhook-test-item">
+                        <div class="webhook-test-name">${webhook.name}</div>
+                        <div class="webhook-test-url">${webhook.url}</div>
+                        <div class="webhook-test-status" id="webhook-status-${index}">Не проверено</div>
+                        <button class="webhook-test-button" onclick="app.testWebhook(${index})">
+                            Проверить ${webhook.method}
+                        </button>
+                        <div class="webhook-test-response" id="webhook-response-${index}" style="display: none;"></div>
+                    </div>
+                `).join('');
+            },
+            
+            async testWebhook(index) {
+                const webhook = this.webhooks[index];
+                const statusEl = document.getElementById(`webhook-status-${index}`);
+                const responseEl = document.getElementById(`webhook-response-${index}`);
+                
+                statusEl.textContent = 'Проверяется...';
+                statusEl.className = 'webhook-test-status pending';
+                responseEl.style.display = 'none';
+                
+                try {
+                    let url = webhook.url;
+                    let options = {
+                        method: webhook.method,
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    };
+                    
+                    // Построение URL для тестирования
+                    if (webhook.testUrl) {
+                        if (webhook.requiresDate) {
+                            url = webhook.testUrl(telegramUserId, utils.formatDateKey(new Date()));
+                        } else {
+                            url = webhook.testUrl(telegramUserId);
+                        }
+                    }
+                    
+                    // Добавление тела запроса для POST
+                    if (webhook.method === 'POST' && webhook.testBody) {
+                        options.body = JSON.stringify(webhook.testBody);
+                    }
+                    
+                    console.log(`Testing ${webhook.name}:`, url, options);
+                    
+                    const startTime = Date.now();
+                    const response = await fetch(url, options);
+                    const endTime = Date.now();
+                    const duration = endTime - startTime;
+                    
+                    const responseText = await response.text();
+                    let responseData;
+                    try {
+                        responseData = JSON.parse(responseText);
+                    } catch (e) {
+                        responseData = responseText;
+                    }
+                    
+                    if (response.ok) {
+                        statusEl.textContent = `Успешно (${duration}ms)`;
+                        statusEl.className = 'webhook-test-status success';
+                    } else {
+                        statusEl.textContent = `Ошибка ${response.status} (${duration}ms)`;
+                        statusEl.className = 'webhook-test-status error';
+                    }
+                    
+                    responseEl.textContent = JSON.stringify(responseData, null, 2);
+                    responseEl.style.display = 'block';
+                    
+                } catch (error) {
+                    statusEl.textContent = `Ошибка: ${error.message}`;
+                    statusEl.className = 'webhook-test-status error';
+                    responseEl.textContent = error.stack;
+                    responseEl.style.display = 'block';
+                }
+            },
+            
+            async testAll() {
+                for (let i = 0; i < this.webhooks.length; i++) {
+                    await this.testWebhook(i);
+                    // Небольшая задержка между запросами
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            }
+        };
+
         // Основные функции приложения
         const appActions = {
             async init() {
@@ -2298,7 +2603,13 @@
             
             // Отладка
             toggleDebug: debug.toggle,
-            clearDebugLog: debug.clear
+            clearDebugLog: debug.clear,
+            
+            // Тестирование вебхуков
+            openWebhookTest: () => webhookTest.openPanel(),
+            closeWebhookTest: () => webhookTest.closePanel(),
+            testWebhook: (index) => webhookTest.testWebhook(index),
+            testAllWebhooks: () => webhookTest.testAll()
         };
     })();
     </script>
