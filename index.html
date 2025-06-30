@@ -1286,9 +1286,9 @@
             calendar: `${API_BASE}/a8c27692-17b1-45f8-a11f-0e5a7063a5ed/api/calendar`,
             // ИСПРАВЛЕНО: Правильный endpoint без ID для операций с задачами
             taskOperations: `${API_BASE}/api/tasks`,
-            // ВРЕМЕННО ОТКЛЮЧАЕМ неработающие endpoints
-            trainerMode: `${API_BASE}/trainer-mode-webhook-id/api/user`, // Нужно создать в n8n
-            weeklyStats: `${API_BASE}/weekly-stats-webhook-id/api/tasks` // Нужно создать в n8n
+            // ИСПРАВЛЕНО: Правильные endpoints из n8n
+            trainerMode: `${API_BASE}/trainer-mode-webhook-id/api/user`,
+            weeklyStats: `${API_BASE}/weekly-stats-webhook-id/api/tasks`
         };
         
         // Инициализация Telegram WebApp
@@ -1895,9 +1895,11 @@
                 let deadlineText = '';
                 if (task.deadline) {
                     const deadline = new Date(task.deadline);
+                    // Корректируем время для локального часового пояса
                     deadlineText = deadline.toLocaleTimeString('ru-RU', { 
                         hour: '2-digit', 
-                        minute: '2-digit' 
+                        minute: '2-digit',
+                        timeZone: 'Europe/Sofia' // Или используйте ваш часовой пояс
                     });
                 }
                 
